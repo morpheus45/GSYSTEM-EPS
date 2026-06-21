@@ -82,6 +82,7 @@ function hash(pw) {
 function login(email, password) {
   const u = findUserByEmail(email);
   if (!u || u.passwordHash !== hash(password)) throw new Error("Email ou mot de passe incorrect.");
+  if (u.status === "inactive") throw new Error("Accès désactivé. Contactez votre administrateur.");
   const token = Utilities.getUuid();
   appendRow("Sessions", [token, u.id, new Date().toISOString()]);
   return { token: token, user: publicUser(u) };
@@ -90,7 +91,12 @@ function login(email, password) {
 function sessionUser(token) {
   const rows = sheet("Sessions").getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
-    if (rows[i][0] === token) return findUserById(rows[i][1]);
+    if (rows[i][0] === token) {
+      const u = findUserById(rows[i][1]);
+      // accès coupé immédiatement si le compte a été désactivé entre-temps
+      if (u && u.status === "inactive") return null;
+      return u;
+    }
   }
   return null;
 }
@@ -121,6 +127,7 @@ function createUser(me, p) {
   appendRow("Users", [
     id, p.name, p.email, hash(p.password), p.role,
     p.responsableId || "", p.codeTech || "", driveId, driveUrl, new Date().toISOString(),
+    "active",
   ]);
   log("createUser", me.email, p.email + " (" + p.role + ")");
   return publicUser(findUserById(id));
@@ -138,6 +145,7 @@ function updateUser(me, p) {
       if (patch.role != null) rows[i][4] = patch.role;
       if (patch.responsableId !== undefined) rows[i][5] = patch.responsableId || "";
       if (patch.codeTech != null) rows[i][6] = patch.codeTech;
+      if (patch.status != null) rows[i][10] = patch.status;
       sh.getRange(i + 1, 1, 1, rows[i].length).setValues([rows[i]]);
       return publicUser(findUserById(p.id));
     }
@@ -369,6 +377,7 @@ function publicUser(u) {
     id: u.id, name: u.name, email: u.email, role: u.role,
     responsableId: u.responsableId || null, codeTech: u.codeTech || "",
     driveUrl: u.driveUrl || "", createdAt: u.createdAt,
+    status: u.status || "active",
   };
 }
 function log(action, who, detail) {
@@ -379,7 +388,7 @@ function log(action, who, detail) {
 function setup() {
   const ss = db();
   const headers = {
-    Users: ["id", "name", "email", "passwordHash", "role", "responsableId", "codeTech", "driveFolderId", "driveUrl", "createdAt"],
+    Users: ["id", "name", "email", "passwordHash", "role", "responsableId", "codeTech", "driveFolderId", "driveUrl", "createdAt", "status"],
     Temps: ["userId", "id", "date", "json", "ts"],
     Frais: ["userId", "id", "date", "json", "ts"],
     GesteCo: ["userId", "id", "date", "json", "ts"],
@@ -402,6 +411,7 @@ function setup() {
     appendRow("Users", [
       "u_admin", CONFIG.BOOTSTRAP_ADMIN.name, CONFIG.BOOTSTRAP_ADMIN.email,
       hash(CONFIG.BOOTSTRAP_ADMIN.password), "admin", "", "", "", "", new Date().toISOString(),
+      "active",
     ]);
   }
   Logger.log("Setup OK. Base : " + ss.getUrl());

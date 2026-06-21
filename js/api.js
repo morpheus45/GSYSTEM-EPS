@@ -43,13 +43,13 @@ function seedDb() {
   return {
     users: [
       { id: "u_admin", name: "Cedric Lago Gomez", email: "admin@gsystem.fr", password: "admin",
-        role: "admin", responsableId: null, codeTech: "ISTGS54", driveUrl: "#", createdAt: todayIso() },
+        role: "admin", responsableId: null, codeTech: "ISTGS54", driveUrl: "#", createdAt: todayIso(), status: "active" },
       { id: "u_resp", name: "Johanna Martin", email: "resp@gsystem.fr", password: "resp",
-        role: "responsable", responsableId: null, codeTech: "", driveUrl: "#", createdAt: todayIso() },
+        role: "responsable", responsableId: null, codeTech: "", driveUrl: "#", createdAt: todayIso(), status: "active" },
       { id: "u_tech", name: "Tech Démo", email: "tech@gsystem.fr", password: "tech",
-        role: "tech", responsableId: "u_resp", codeTech: "ISTGS54", driveUrl: "#", createdAt: todayIso() },
+        role: "tech", responsableId: "u_resp", codeTech: "ISTGS54", driveUrl: "#", createdAt: todayIso(), status: "active" },
       { id: "u_tech2", name: "Paul Bernard", email: "paul@gsystem.fr", password: "paul",
-        role: "tech", responsableId: "u_resp", codeTech: "ISTGS61", driveUrl: "#", createdAt: todayIso() },
+        role: "tech", responsableId: "u_resp", codeTech: "ISTGS61", driveUrl: "#", createdAt: todayIso(), status: "active" },
     ],
     data: { u_tech: techData("Tech Démo"), u_tech2: techData("Paul Bernard") },
   };
@@ -78,10 +78,12 @@ function demo(action, params, token) {
         (x) => x.email.toLowerCase() === (params.email || "").toLowerCase() && x.password === params.password
       );
       if (!u) throw new Error("Email ou mot de passe incorrect.");
+      if (u.status === "inactive") throw new Error("Accès désactivé. Contactez votre administrateur.");
       return { token: "demo:" + u.id, user: publicUser(u) };
     }
     case "me": {
       if (!me) throw new Error("Session expirée.");
+      if (me.status === "inactive") throw new Error("Accès désactivé.");
       return publicUser(me);
     }
     case "tree": {
@@ -100,7 +102,7 @@ function demo(action, params, token) {
       const u = {
         id: uid(), name: params.name, email: params.email, password: params.password,
         role: params.role, responsableId: params.responsableId || null,
-        codeTech: params.codeTech || "", createdAt: todayIso(),
+        codeTech: params.codeTech || "", createdAt: todayIso(), status: "active",
         driveUrl: "#dossier-drive-" + encodeURIComponent(params.name),
       };
       db.users.push(u);

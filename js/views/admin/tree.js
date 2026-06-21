@@ -13,8 +13,10 @@ export async function adminTreeView() {
   const admins = users.filter((u) => u.role === "admin");
   const resps = users.filter((u) => u.role === "responsable");
   const techs = users.filter((u) => u.role === "tech");
-  const techsOf = (rid) => techs.filter((t) => t.responsableId === rid);
-  const orphanTechs = techs.filter((t) => !t.responsableId || !resps.some((r) => r.id === t.responsableId));
+  const activeTechs = techs.filter((t) => t.status !== "inactive");
+  const inactiveTechs = techs.filter((t) => t.status === "inactive");
+  const techsOf = (rid) => activeTechs.filter((t) => t.responsableId === rid);
+  const orphanTechs = activeTechs.filter((t) => !t.responsableId || !resps.some((r) => r.id === t.responsableId));
 
   const screen = h("div", { class: "screen" });
 
@@ -31,7 +33,8 @@ export async function adminTreeView() {
       h("div", { class: "wordmark t-display-m" }, "ORGANISATION"),
       h("div", { class: "identity" }, h("span", { class: "pip" }),
         h("span", { class: "who t-label-m" },
-          `${admins.length} admin · ${resps.length} responsables · ${techs.length} techs`)))
+          `${admins.length} admin · ${resps.length} responsables · ${activeTechs.length} techs`
+          + (inactiveTechs.length ? ` · ${inactiveTechs.length} inactifs` : ""))))
   );
 
   const body = h("div", { class: "screen-body" });
@@ -51,6 +54,9 @@ export async function adminTreeView() {
   if (orphanTechs.length && me.role === "admin") {
     body.append(section("Techniciens sans responsable", orphanTechs.map((u) => leaf(u))));
   }
+  if (inactiveTechs.length) {
+    body.append(section("Techniciens inactifs · plus là", inactiveTechs.map((u) => leaf(u, true))));
+  }
 
   screen.append(body);
 
@@ -65,13 +71,15 @@ export async function adminTreeView() {
     return h("div", {}, h("div", { class: "section-title" }, title), ...nodes);
   }
 
-  function leaf(u) {
-    return h("div", { class: "node" },
+  function leaf(u, inactive) {
+    return h("div", { class: "node", style: inactive ? "opacity:.55" : "" },
       h("div", { class: "node-head", onclick: () => navigate("/admin/user/" + u.id) },
         avatar(u),
         h("div", { class: "meta" }, h("div", { class: "nm" }, u.name),
           h("div", { class: "sub" }, u.email)),
-        h("span", { class: "badge role-" + u.role }, ROLE_LABEL[u.role]),
+        inactive
+          ? h("span", { class: "badge", style: "color:var(--text-low)" }, "Inactif")
+          : h("span", { class: "badge role-" + u.role }, ROLE_LABEL[u.role]),
         h("span", { class: "chev" }, icon("chevron", 18))));
   }
 

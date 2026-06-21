@@ -68,15 +68,38 @@ export async function userDetailView(userId) {
 
   // actions admin
   let actions = null;
+  const isInactive = u.status === "inactive";
+  if (isInactive) {
+    body.splice(1, 0, h("div", { class: "banner amber" }, "Compte inactif · accès coupé (« plus là »)."));
+  }
+
   if (me.role === "admin") {
     actions = h("button", { class: "icon-btn", title: "Modifier", onclick: () => navigate("/admin/edit/" + u.id) }, icon("settings", 18));
+
+    const setStatus = async (status, msg) => {
+      try { overlay(true); await api("updateUser", { id: u.id, patch: { status } }, token()); overlay(false);
+        toast(msg); navigate("/admin/user/" + u.id); }
+      catch (e) { overlay(false); toast(e.message); }
+    };
+
+    if (isInactive) {
+      body.push(h("button", { class: "btn", style: "margin-top:16px;background:var(--success)",
+        onclick: () => setStatus("active", "Compte réactivé · accès rétabli") }, "Réactiver l'accès"));
+    } else {
+      body.push(h("button", { class: "btn", style: "margin-top:16px;background:var(--warning);color:#1a1a1a",
+        onclick: () => {
+          if (!confirm(`Désactiver ${u.name} ? Son accès est coupé immédiatement (il bascule dans « inactifs »). Ses données sont conservées.`)) return;
+          setStatus("inactive", "Compte désactivé · accès coupé");
+        } }, "Désactiver (couper l'accès)"));
+    }
+
     body.push(
-      h("button", { class: "btn danger", style: "margin-top:16px", onclick: async () => {
-        if (!confirm(`Supprimer définitivement ${u.name} ?`)) return;
+      h("button", { class: "btn danger", style: "margin-top:8px", onclick: async () => {
+        if (!confirm(`SUPPRIMER DÉFINITIVEMENT ${u.name} ? Cette action efface le compte et ne peut pas être annulée. (Préférer « Désactiver ».)`)) return;
         try { overlay(true); await api("deleteUser", { id: u.id }, token()); overlay(false);
-          toast("Compte supprimé"); navigate("/admin"); }
+          toast("Compte supprimé définitivement"); navigate("/admin"); }
         catch (e) { overlay(false); toast(e.message); }
-      } }, "Supprimer cet accès")
+      } }, "Supprimer définitivement")
     );
   }
 
