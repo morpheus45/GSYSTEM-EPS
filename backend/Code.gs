@@ -66,6 +66,8 @@ function dispatch(action, params, token) {
     case "getUserData":return getUserData(requireUser(me), params.userId);
     case "pushEntries":return pushEntries(requireUser(me), params.kind, params.entries);
     case "deleteEntry":return deleteEntry(requireUser(me), params.kind, params.id);
+    case "uploadFile": return uploadFile(requireUser(me), params);
+    case "listFiles":  return listFiles(requireUser(me), params.userId);
     case "send":       return send(requireUser(me), params);
     default: throw new Error("Action inconnue: " + action);
   }
@@ -197,6 +199,40 @@ function deleteEntry(me, kind, id) {
   return { ok: true };
 }
 
+/* ====================== FICHIERS (Excel annuel / pièces) ====================== */
+// Le tech dépose son .xlsm 1×/an : on le stocke dans SON dossier Drive et on
+// le référence dans l'onglet Files. Remplace l'ancien modèle de même `kind`.
+function uploadFile(me, p) {
+  const u = findUserById(me.id);
+  if (!u.driveFolderId) throw new Error("Aucun dossier Drive (compte non-tech ?).");
+  const folder = DriveApp.getFolderById(u.driveFolderId);
+  const bytes = Utilities.base64Decode(p.base64);
+  const mime = p.mimeType || "application/vnd.ms-excel.sheet.macroEnabled.12";
+  const blob = Utilities.newBlob(bytes, mime, p.filename || "modele.xlsm");
+
+  // supprime l'ancien fichier du même type
+  const sh = sheet("Files");
+  const rows = sh.getDataRange().getValues();
+  for (let i = rows.length - 1; i >= 1; i--) {
+    if (rows[i][0] === me.id && rows[i][1] === p.kind) {
+      try { DriveApp.getFileById(rows[i][2]).setTrashed(true); } catch (e) {}
+      sh.deleteRow(i + 1);
+    }
+  }
+  const file = folder.createFile(blob);
+  appendRow("Files", [me.id, p.kind, file.getId(), file.getName(), file.getUrl(), new Date().toISOString()]);
+  log("uploadFile/" + p.kind, me.email, file.getName());
+  return { fileId: file.getId(), filename: file.getName(), url: file.getUrl() };
+}
+
+function listFiles(me, userId) {
+  const target = userId || me.id;
+  if (me.role === "tech" && target !== me.id) throw new Error("Accès refusé.");
+  return readAll("Files")
+    .filter(function (f) { return f.userId === target; })
+    .map(function (f) { return { kind: f.kind, fileId: f.fileId, filename: f.filename, url: f.url, ts: f.ts }; });
+}
+
 /* ====================== ENVOIS (mail / viber-log) ====================== */
 function send(me, p) {
   // Viber : pas d'API publique → on journalise le message (à relayer manuellement
@@ -211,12 +247,51 @@ function send(me, p) {
   if (p.type === "email") {
     const subject = mailSubject(me, p.channel, p.payload);
     const to = mailRecipients(p.channel);
-    const bodyText = mailBody(me, p.channel, p.payload);
-    GmailApp.sendEmail(to.to, subject, bodyText, { cc: to.cc });
+    let bodyText = mailBody(me, p.channel, p.payload);
+    const attachments = [];
+
+    // ENVOI MENSUEL : on archive une copie de vérification dans le Drive du tech
+    // (sous-dossier daté) + on la joint au mail.
+    if (p.channel === "mensuel" && folderId) {
+      const arch = archiveMensuel(me, folderId, p.payload || {});
+      attachments.push(arch.csvBlob);
+      bodyText += "\n" + arch.note;
+    }
+
+    GmailApp.sendEmail(to.to, subject, bodyText, { cc: to.cc, attachments: attachments });
     log("email/" + p.channel, me.email, subject);
     return { ok: true, to: to.to };
   }
   return { ok: true };
+}
+
+// Crée/retrouve "Archives mensuelles/<période>" dans le dossier du tech, y dépose
+// un export CSV des données du cycle (vérification) + une copie de son Excel modèle.
+function archiveMensuel(me, folderId, payload) {
+  const root = DriveApp.getFolderById(folderId);
+  const archives = getOrCreateChild(root, "Archives mensuelles");
+  const label = (payload.start || new Date().toISOString().slice(0, 10)).replace(/\//g, "-");
+  const sub = getOrCreateChild(archives, label);
+
+  // export CSV des interventions du tech (toutes ; le mail précise la période)
+  const temps = readData("Temps", me.id);
+  let csv = "date;type;client;ville;dept;num;observation\n";
+  temps.forEach(function (e) {
+    csv += [e.date, e.typeMission, e.nomClient, e.ville, e.departement, e.numeroIntervention, e.observationType]
+      .map(function (x) { return (x || "").toString().replace(/;/g, ","); }).join(";") + "\n";
+  });
+  const csvBlob = Utilities.newBlob(csv, "text/csv", "verification-" + label + ".csv");
+  sub.createFile(csvBlob);
+
+  // copie du modèle Excel du tech (si fourni) pour la trace mensuelle
+  const tpl = readAll("Files").filter(function (f) { return f.userId === me.id && f.kind === "excel_template"; })[0];
+  if (tpl) { try { DriveApp.getFileById(tpl.fileId).makeCopy("mensuel-" + label + ".xlsm", sub); } catch (e) {} }
+
+  return { folderUrl: sub.getUrl(), csvBlob: csvBlob, note: "Archive : " + sub.getUrl() };
+}
+function getOrCreateChild(parent, name) {
+  const it = parent.getFoldersByName(name);
+  return it.hasNext() ? it.next() : parent.createFolder(name);
 }
 
 function mailRecipients(channel) {
@@ -309,6 +384,7 @@ function setup() {
     Frais: ["userId", "id", "date", "json", "ts"],
     GesteCo: ["userId", "id", "date", "json", "ts"],
     Compteur: ["userId", "id", "date", "json", "ts"],
+    Files: ["userId", "kind", "fileId", "filename", "url", "ts"],
     Sessions: ["token", "userId", "createdAt"],
     Log: ["ts", "action", "who", "detail"],
   };

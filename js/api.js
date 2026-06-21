@@ -152,9 +152,28 @@ function demo(action, params, token) {
       saveDb(db);
       return { ok: true };
     }
+    case "uploadFile": {
+      if (!me) throw new Error("Session expirée.");
+      db.files ||= {};
+      const arr = (db.files[me.id] ||= []);
+      const f = { kind: params.kind, filename: params.filename, url: "#demo",
+        size: params.size || 0, ts: todayIso() };
+      const i = arr.findIndex((x) => x.kind === params.kind);
+      if (i >= 0) arr[i] = f; else arr.push(f);
+      saveDb(db);
+      return { fileId: "demo", filename: f.filename, url: f.url };
+    }
+    case "listFiles": {
+      if (!me) throw new Error("Session expirée.");
+      db.files ||= {};
+      const target = params.userId || me.id;
+      if (me.role === "tech" && target !== me.id) throw new Error("Accès refusé.");
+      return db.files[target] || [];
+    }
     case "send": {
       // simulation d'envoi serveur (mail/excel). En vrai → GmailApp + Drive.
-      return { ok: true, simulated: true, message: params.message || "" };
+      const extra = params.channel === "mensuel" ? " · archive de vérification créée dans le Drive" : "";
+      return { ok: true, simulated: true, message: (params.message || "") + extra };
     }
     default:
       throw new Error("Action inconnue: " + action);
