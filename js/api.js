@@ -1,0 +1,176 @@
+// API — couche d'accès au backend Google Apps Script.
+// Tant que CONFIG.BACKEND_URL est vide → MODE DÉMO (données locales factices).
+import { CONFIG, DEMO } from "./config.js";
+import { todayIso } from "./business/dates.js";
+
+const LS_KEY = "gsystem_demo_db_v1";
+
+// ----------------------------------------------------------------
+//  MODE LIVE — appels au backend Apps Script (POST JSON, action+params)
+// ----------------------------------------------------------------
+async function callBackend(action, params = {}, token = null) {
+  const res = await fetch(CONFIG.BACKEND_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" }, // évite le preflight CORS
+    body: JSON.stringify({ action, token, params }),
+  });
+  if (!res.ok) throw new Error("Erreur réseau (" + res.status + ")");
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data.result;
+}
+
+// ----------------------------------------------------------------
+//  MODE DÉMO — base factice en localStorage
+// ----------------------------------------------------------------
+function seedDb() {
+  const techData = (n) => ({
+    temps: [
+      { id: "t1", date: todayIso(), typeMission: "INST", nomClient: "richard", ville: "gignac",
+        departement: "34", numeroIntervention: "43001714", observationType: "", slotMidi: "MATIN" },
+      { id: "t2", date: todayIso(), typeMission: "SAV", nomClient: "durand", ville: "sete",
+        departement: "34", numeroIntervention: "12345678", observationType: "NR_CLIENT_ABS", slotMidi: "APREM" },
+    ],
+    frais: [
+      { id: "f1", date: todayIso(), categorie: "PEAGE", montantEur: 12.4 },
+      { id: "f2", date: todayIso(), categorie: "REPAS", montantEur: 15.9 },
+    ],
+    gesteCo: [
+      { id: "g1", date: todayIso(), numeroSite: "S-204", installed: { GSM: 2, CO: 1 }, offered: { GSM: 1 } },
+    ],
+    compteur: [],
+  });
+  return {
+    users: [
+      { id: "u_admin", name: "Cedric Lago Gomez", email: "admin@gsystem.fr", password: "admin",
+        role: "admin", responsableId: null, codeTech: "ISTGS54", driveUrl: "#", createdAt: todayIso() },
+      { id: "u_resp", name: "Johanna Martin", email: "resp@gsystem.fr", password: "resp",
+        role: "responsable", responsableId: null, codeTech: "", driveUrl: "#", createdAt: todayIso() },
+      { id: "u_tech", name: "Tech Démo", email: "tech@gsystem.fr", password: "tech",
+        role: "tech", responsableId: "u_resp", codeTech: "ISTGS54", driveUrl: "#", createdAt: todayIso() },
+      { id: "u_tech2", name: "Paul Bernard", email: "paul@gsystem.fr", password: "paul",
+        role: "tech", responsableId: "u_resp", codeTech: "ISTGS61", driveUrl: "#", createdAt: todayIso() },
+    ],
+    data: { u_tech: techData("Tech Démo"), u_tech2: techData("Paul Bernard") },
+  };
+}
+function loadDb() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  const db = seedDb();
+  saveDb(db);
+  return db;
+}
+function saveDb(db) { localStorage.setItem(LS_KEY, JSON.stringify(db)); }
+function uid() { return "u_" + Math.random().toString(36).slice(2, 9); }
+function publicUser(u) { const { password, ...rest } = u; return rest; }
+
+function demo(action, params, token) {
+  const db = loadDb();
+  const sessUserId = token ? token.replace("demo:", "") : null;
+  const me = db.users.find((u) => u.id === sessUserId);
+
+  switch (action) {
+    case "login": {
+      const u = db.users.find(
+        (x) => x.email.toLowerCase() === (params.email || "").toLowerCase() && x.password === params.password
+      );
+      if (!u) throw new Error("Email ou mot de passe incorrect.");
+      return { token: "demo:" + u.id, user: publicUser(u) };
+    }
+    case "me": {
+      if (!me) throw new Error("Session expirée.");
+      return publicUser(me);
+    }
+    case "tree": {
+      if (!me || me.role === "tech") throw new Error("Accès refusé.");
+      // responsable → uniquement son équipe ; admin → tout
+      let users = db.users.map(publicUser);
+      if (me.role === "responsable") {
+        users = users.filter((u) => u.id === me.id || u.responsableId === me.id);
+      }
+      return { users };
+    }
+    case "createUser": {
+      if (!me || me.role !== "admin") throw new Error("Seul l'admin peut créer un compte.");
+      if (db.users.some((u) => u.email.toLowerCase() === params.email.toLowerCase()))
+        throw new Error("Cet email existe déjà.");
+      const u = {
+        id: uid(), name: params.name, email: params.email, password: params.password,
+        role: params.role, responsableId: params.responsableId || null,
+        codeTech: params.codeTech || "", createdAt: todayIso(),
+        driveUrl: "#dossier-drive-" + encodeURIComponent(params.name),
+      };
+      db.users.push(u);
+      if (u.role === "tech") db.data[u.id] = { temps: [], frais: [], gesteCo: [], compteur: [] };
+      saveDb(db);
+      return publicUser(u);
+    }
+    case "updateUser": {
+      if (!me || me.role !== "admin") throw new Error("Accès refusé.");
+      const u = db.users.find((x) => x.id === params.id);
+      if (!u) throw new Error("Utilisateur introuvable.");
+      Object.assign(u, params.patch || {});
+      saveDb(db);
+      return publicUser(u);
+    }
+    case "deleteUser": {
+      if (!me || me.role !== "admin") throw new Error("Accès refusé.");
+      db.users = db.users.filter((x) => x.id !== params.id);
+      delete db.data[params.id];
+      saveDb(db);
+      return { ok: true };
+    }
+    case "getUserData": {
+      if (!me) throw new Error("Session expirée.");
+      const target = params.userId || me.id;
+      // garde-fou : tech → ses données ; responsable → son équipe ; admin → tout
+      if (me.role === "tech" && target !== me.id) throw new Error("Accès refusé.");
+      if (me.role === "responsable") {
+        const t = db.users.find((u) => u.id === target);
+        if (!t || (t.id !== me.id && t.responsableId !== me.id)) throw new Error("Accès refusé.");
+      }
+      return db.data[target] || { temps: [], frais: [], gesteCo: [], compteur: [] };
+    }
+    case "pushEntries": {
+      if (!me) throw new Error("Session expirée.");
+      const bucket = (db.data[me.id] ||= { temps: [], frais: [], gesteCo: [], compteur: [] });
+      const arr = (bucket[params.kind] ||= []);
+      for (const e of params.entries || []) {
+        const i = arr.findIndex((x) => x.id === e.id);
+        if (i >= 0) arr[i] = e; else arr.push(e);
+      }
+      saveDb(db);
+      return { count: arr.length };
+    }
+    case "deleteEntry": {
+      if (!me) throw new Error("Session expirée.");
+      const bucket = db.data[me.id]; if (bucket && bucket[params.kind])
+        bucket[params.kind] = bucket[params.kind].filter((x) => x.id !== params.id);
+      saveDb(db);
+      return { ok: true };
+    }
+    case "send": {
+      // simulation d'envoi serveur (mail/excel). En vrai → GmailApp + Drive.
+      return { ok: true, simulated: true, message: params.message || "" };
+    }
+    default:
+      throw new Error("Action inconnue: " + action);
+  }
+}
+
+// ----------------------------------------------------------------
+//  Façade unique
+// ----------------------------------------------------------------
+export async function api(action, params = {}, token = null) {
+  if (DEMO) {
+    // micro-latence pour réalisme
+    await new Promise((r) => setTimeout(r, 120));
+    return demo(action, params, token);
+  }
+  return callBackend(action, params, token);
+}
+
+export function resetDemo() { localStorage.removeItem(LS_KEY); }

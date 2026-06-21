@@ -1,0 +1,104 @@
+import { h, icon, initials, avatarColor, toast, overlay } from "../../ui.js";
+import { currentUser, logout } from "../../auth.js";
+import { navigate } from "../../router.js";
+import { api } from "../../api.js";
+import { token } from "../../auth.js";
+
+const ROLE_LABEL = { admin: "Admin", responsable: "Responsable", tech: "Technicien" };
+
+export async function adminTreeView() {
+  const me = currentUser();
+  const { users } = await api("tree", {}, token());
+
+  const admins = users.filter((u) => u.role === "admin");
+  const resps = users.filter((u) => u.role === "responsable");
+  const techs = users.filter((u) => u.role === "tech");
+  const techsOf = (rid) => techs.filter((t) => t.responsableId === rid);
+  const orphanTechs = techs.filter((t) => !t.responsableId || !resps.some((r) => r.id === t.responsableId));
+
+  const screen = h("div", { class: "screen" });
+
+  // top bar
+  screen.append(
+    h("div", { class: "statusbar" },
+      h("div", { class: "live-ref" }, h("span", { class: "live-dot" }),
+        h("span", { class: "ref t-label-m" }, (me.role === "admin" ? "ADMIN" : "RESPONSABLE") + " · " + me.name)),
+      h("div", { style: "display:flex;gap:8px" },
+        h("button", { class: "icon-btn", title: "Tableau de bord", onclick: () => navigate("/admin/dashboard") }, icon("speed", 18)),
+        h("button", { class: "icon-btn", title: "Déconnexion", onclick: () => { logout(); navigate("/login"); } }, icon("logout", 18)))),
+    h("hr", { class: "hairline" }),
+    h("div", { class: "home-header", style: "padding-bottom:8px" },
+      h("div", { class: "wordmark t-display-m" }, "ORGANISATION"),
+      h("div", { class: "identity" }, h("span", { class: "pip" }),
+        h("span", { class: "who t-label-m" },
+          `${admins.length} admin · ${resps.length} responsables · ${techs.length} techs`)))
+  );
+
+  const body = h("div", { class: "screen-body" });
+
+  if (me.role === "admin") {
+    body.append(section("Direction", admins.map((u) => leaf(u))));
+  }
+
+  body.append(h("div", { class: "section-title" }, "Équipes"));
+  for (const r of resps) {
+    body.append(branch(r, techsOf(r.id)));
+  }
+  if (!resps.length && me.role === "responsable") {
+    // un responsable voit directement son équipe
+    body.append(...techsOf(me.id).map((t) => leaf(t)));
+  }
+  if (orphanTechs.length && me.role === "admin") {
+    body.append(section("Techniciens sans responsable", orphanTechs.map((u) => leaf(u))));
+  }
+
+  screen.append(body);
+
+  // bouton créer (admin seulement)
+  if (me.role === "admin") {
+    screen.append(h("div", { class: "fab" },
+      h("button", { class: "btn", onclick: () => navigate("/admin/new") },
+        icon("add", 18), "Créer un accès")));
+  }
+
+  function section(title, nodes) {
+    return h("div", {}, h("div", { class: "section-title" }, title), ...nodes);
+  }
+
+  function leaf(u) {
+    return h("div", { class: "node" },
+      h("div", { class: "node-head", onclick: () => navigate("/admin/user/" + u.id) },
+        avatar(u),
+        h("div", { class: "meta" }, h("div", { class: "nm" }, u.name),
+          h("div", { class: "sub" }, u.email)),
+        h("span", { class: "badge role-" + u.role }, ROLE_LABEL[u.role]),
+        h("span", { class: "chev" }, icon("chevron", 18))));
+  }
+
+  function branch(r, children) {
+    const node = h("div", { class: "node" });
+    const head = h("div", { class: "node-head" },
+      avatar(r),
+      h("div", { class: "meta", onclick: () => navigate("/admin/user/" + r.id) },
+        h("div", { class: "nm" }, r.name),
+        h("div", { class: "sub" }, `${children.length} tech${children.length > 1 ? "s" : ""}`)),
+      h("span", { class: "badge role-responsable" }, "Responsable"),
+      h("span", { class: "chev" }, icon("chevron", 18)));
+    head.addEventListener("click", (e) => {
+      if (e.target.closest(".meta")) return; // clic sur le nom → détail
+      node.classList.toggle("open");
+    });
+    const kids = h("div", { class: "node-children" },
+      children.length ? children.map((t) => leaf(t)) : h("div", { class: "muted-empty" }, "Aucun tech"));
+    node.append(head, kids);
+    node.classList.add("open");
+    return node;
+  }
+
+  function avatar(u) {
+    return h("div", { class: "avatar", style: `background:${avatarColor(u.name)}` }, initials(u.name));
+  }
+
+  overlay(false);
+  return screen;
+}
