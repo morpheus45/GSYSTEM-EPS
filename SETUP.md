@@ -24,6 +24,8 @@ un dossier Drive créé automatiquement pour chaque technicien.
 
 1. Va sur [script.google.com](https://script.google.com) → **Nouveau projet**.
 2. Efface le contenu du fichier, et **colle tout le fichier** [`backend/Code.gs`](backend/Code.gs).
+   Puis **ajoute un 2ᵉ fichier** (➕ à côté de « Fichiers » → Script → nomme-le `ExcelFiller`)
+   et **colle** [`backend/ExcelFiller.gs`](backend/ExcelFiller.gs) (remplissage du `.xlsm`).
 3. Tout en haut, dans `CONFIG`, remplis :
    - `DRIVE_ROOT_FOLDER_ID` → l'ID copié à l'étape A.
    - `BOOTSTRAP_ADMIN` → ton nom, ton email de connexion, **ton mot de passe admin**.
@@ -86,6 +88,12 @@ L'icône G rouge apparaît comme une vraie app, plein écran, et marche hors-lig
   messages Viber sont **journalisés** côté serveur (onglet `Log`). Les **mails**
   (GS / EPS) partent, eux, **automatiquement** par Gmail. Si tu veux un relais
   Viber 100 % auto, il faudra une passerelle dédiée (à voir plus tard).
+- **Excel mensuel** : le tech dépose son `.xlsm` 1×/an (écran ENVOI MENSUEL).
+  À chaque envoi mensuel, le serveur en remplit une **copie** (dépt/mission/heures/
+  observations dans les bons jours, **macros conservées**) rangée dans son Drive
+  (`Archives mensuelles/<période>`) et jointe au mail. **Le modèle d'origine n'est
+  jamais modifié.** Pour valider/ajuster sur ton vrai fichier : exécute la fonction
+  `testFillExcel` (éditer l'email du tech en haut) et regarde les Logs.
 - **Mise à jour de l'app** : elle se met à jour toute seule (PWA), pas de
   réinstallation. Pour pousser une nouvelle version, tu mets à jour le repo.
 - **Changer un destinataire mail** : édite `CONFIG.MAIL` dans le script puis

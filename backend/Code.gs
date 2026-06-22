@@ -322,6 +322,7 @@ function send(me, p) {
     if (p.channel === "mensuel" && folderId) {
       const arch = archiveMensuel(me, folderId, p.payload || {});
       attachments.push(arch.csvBlob);
+      if (arch.xlsmBlob) attachments.push(arch.xlsmBlob);
       bodyText += "\n" + arch.note;
     }
 
@@ -350,15 +351,38 @@ function archiveMensuel(me, folderId, payload) {
   const csvBlob = Utilities.newBlob(csv, "text/csv", "verification-" + label + ".csv");
   sub.createFile(csvBlob);
 
-  // copie du modèle Excel du tech (si fourni) pour la trace mensuelle
+  // Remplissage du modèle Excel du tech (préserve les macros) → copie mensuelle.
+  // Repli : copie brute du modèle si le remplissage échoue.
   const tpl = readAll("Files").filter(function (f) { return f.userId === me.id && f.kind === "excel_template"; })[0];
-  if (tpl) { try { DriveApp.getFileById(tpl.fileId).makeCopy("mensuel-" + label + ".xlsm", sub); } catch (e) {} }
+  let xlsmBlob = null;
+  if (tpl) {
+    try {
+      const fill = fillTemplateForUser(me.id, frToIso(payload.start), frToIso(payload.end));
+      if (fill.ok) {
+        xlsmBlob = fill.blob.setName("mensuel-" + label + ".xlsm");
+        sub.createFile(xlsmBlob);
+        log("fillExcel", me.email, "écrites=" + fill.report.written +
+          (fill.report.overflow.length ? " surplus=" + fill.report.overflow.join(",") : ""));
+      } else {
+        DriveApp.getFileById(tpl.fileId).makeCopy("mensuel-" + label + ".xlsm", sub);
+      }
+    } catch (e) {
+      log("fillExcel/err", me.email, String(e));
+      try { DriveApp.getFileById(tpl.fileId).makeCopy("mensuel-" + label + ".xlsm", sub); } catch (e2) {}
+    }
+  }
 
-  return { folderUrl: sub.getUrl(), csvBlob: csvBlob, note: "Archive : " + sub.getUrl() };
+  return { folderUrl: sub.getUrl(), csvBlob: csvBlob, xlsmBlob: xlsmBlob, note: "Archive : " + sub.getUrl() };
 }
 function getOrCreateChild(parent, name) {
   const it = parent.getFoldersByName(name);
   return it.hasNext() ? it.next() : parent.createFolder(name);
+}
+// "dd/mm/yyyy" → "yyyy-mm-dd" (null si absent/illisible)
+function frToIso(fr) {
+  if (!fr) return null;
+  const m = String(fr).match(/(\d{2})\/(\d{2})\/(\d{4})/);
+  return m ? (m[3] + "-" + m[2] + "-" + m[1]) : null;
 }
 
 function mailRecipients(channel) {
