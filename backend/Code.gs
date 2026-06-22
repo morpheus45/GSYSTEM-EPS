@@ -25,7 +25,7 @@ const CONFIG = {
   //   "A_COLLER_DANS_APPS_SCRIPT" par ton mot de passe UNIQUEMENT dans l'éditeur
   //   Apps Script (privé), avant de lancer setup(). Il sera à changer à la 1re
   //   connexion pour ≥ 12 caractères.
-  BOOTSTRAP_ADMIN: { name: "Cedric Lago Gomez", email: "ISTGS54@outlook.com", password: "REMPLACER_MDP_ADMIN" },
+  BOOTSTRAP_ADMIN: { name: "Cedric Lago Gomez", email: "cedric.lago@gmail.com", password: "REMPLACER_MDP_ADMIN" },
 
   // Destinataires fixes (cf. HANDOFF.md §5). Les mails partent automatiquement ici.
   MAIL: {
