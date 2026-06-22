@@ -7,7 +7,7 @@ export const CONFIG = {
   // Tant que c'est vide, l'app tourne en MODE DÉMO (données locales factices),
   // ce qui permet de tout voir/tester sans avoir déployé le backend.
   // → Après déploiement, colle l'URL « https://script.google.com/macros/s/XXXX/exec » ici.
-  BACKEND_URL: "",
+  BACKEND_URL: "https://script.google.com/macros/s/AKfycbxJDvoGwgrtlZH5AVrBlHLJy8sYGW7laIKU_AH880C1BRi79_JthDYp2nHgplCP_w9t/exec",
 
   // Identité affichée (barre de statut / footer). Réglable plus tard côté admin.
   ORG: "G-S · FR / 054",
