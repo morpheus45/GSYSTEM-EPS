@@ -3,7 +3,7 @@
    - app shell (HTML/CSS/JS/fonts/icons) : cache-first, mis à jour en arrière-plan
    - appels backend (Apps Script) : toujours réseau (jamais cachés)
 */
-const VERSION = "gsystem-v1.0.1";
+const VERSION = "gsystem-v1.0.2";
 const SHELL = [
   "./",
   "./index.html",

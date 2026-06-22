@@ -1,5 +1,5 @@
 import { h, toast } from "../../ui.js";
-import { screen, field } from "../_shell.js";
+import { screen, field } from "../shell.js";
 import { currentUser, logout } from "../../auth.js";
 import { navigate } from "../../router.js";
 import { CONFIG } from "../../config.js";

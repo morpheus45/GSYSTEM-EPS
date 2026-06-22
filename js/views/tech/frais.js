@@ -1,5 +1,5 @@
 import { h, toast, overlay, icon } from "../../ui.js";
-import { screen, field } from "../_shell.js";
+import { screen, field } from "../shell.js";
 import { token } from "../../auth.js";
 import { api } from "../../api.js";
 import { loadMine, upsert, remove, newId } from "../../store.js";

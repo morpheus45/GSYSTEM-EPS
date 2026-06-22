@@ -1,5 +1,5 @@
 import { h, icon, toast, overlay, initials, avatarColor } from "../../ui.js";
-import { screen } from "../_shell.js";
+import { screen } from "../shell.js";
 import { currentUser } from "../../auth.js";
 import { navigate } from "../../router.js";
 import { api } from "../../api.js";

@@ -1,5 +1,5 @@
 import { h, toast, overlay } from "../../ui.js";
-import { screen, field } from "../_shell.js";
+import { screen, field } from "../shell.js";
 import { navigate } from "../../router.js";
 import { api } from "../../api.js";
 import { token } from "../../auth.js";
