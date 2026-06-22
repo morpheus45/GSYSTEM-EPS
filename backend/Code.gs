@@ -160,12 +160,10 @@ function tree(me) {
 function createUser(me, p) {
   if (findUserByEmail(p.email)) throw new Error("Cet email existe déjà.");
   const id = "u_" + Utilities.getUuid().slice(0, 8);
-  let driveUrl = "", driveId = "";
-  if (p.role === "tech") {
-    const folder = DriveApp.getFolderById(CONFIG.DRIVE_ROOT_FOLDER_ID).createFolder(p.name);
-    driveId = folder.getId();
-    driveUrl = folder.getUrl();
-  }
+  // Dossier Drive pour CHAQUE compte créé (tech, responsable, admin).
+  const folder = DriveApp.getFolderById(CONFIG.DRIVE_ROOT_FOLDER_ID).createFolder(p.name);
+  const driveId = folder.getId();
+  const driveUrl = folder.getUrl();
   const errs = passwordPolicyErrors(p.password, p.email);
   if (errs.length) throw new Error("Mot de passe initial trop faible : il faut " + errs.join(", ") + ".");
   const salt = newSalt();
