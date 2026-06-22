@@ -28,14 +28,14 @@ const ROUTES = [
   { re: /^\/change-password$/, roles: ["tech", "responsable", "admin"], view: () => changePasswordView() },
 
   // TECH
-  { re: /^\/home$/, roles: ["tech"], view: () => homeView() },
-  { re: /^\/cloture$/, roles: ["tech"], view: () => clotureView() },
-  { re: /^\/attente$/, roles: ["tech"], view: () => attenteView() },
-  { re: /^\/courrier$/, roles: ["tech"], view: () => courrierView() },
-  { re: /^\/recap$/, roles: ["tech"], view: () => recapView() },
-  { re: /^\/frais$/, roles: ["tech"], view: () => fraisView() },
-  { re: /^\/envoi$/, roles: ["tech"], view: () => envoiView() },
-  { re: /^\/settings$/, roles: ["tech"], view: () => settingsView() },
+  { re: /^\/home$/, roles: ["tech", "admin", "responsable"], view: () => homeView() },
+  { re: /^\/cloture$/, roles: ["tech", "admin", "responsable"], view: () => clotureView() },
+  { re: /^\/attente$/, roles: ["tech", "admin", "responsable"], view: () => attenteView() },
+  { re: /^\/courrier$/, roles: ["tech", "admin", "responsable"], view: () => courrierView() },
+  { re: /^\/recap$/, roles: ["tech", "admin", "responsable"], view: () => recapView() },
+  { re: /^\/frais$/, roles: ["tech", "admin", "responsable"], view: () => fraisView() },
+  { re: /^\/envoi$/, roles: ["tech", "admin", "responsable"], view: () => envoiView() },
+  { re: /^\/settings$/, roles: ["tech", "admin", "responsable"], view: () => settingsView() },
 
   // ADMIN / RESPONSABLE (arbre + détail)
   { re: /^\/admin$/, roles: ["admin", "responsable"], view: () => adminTreeView() },

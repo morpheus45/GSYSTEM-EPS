@@ -26,6 +26,7 @@ export async function adminTreeView() {
       h("div", { class: "live-ref" }, h("span", { class: "live-dot" }),
         h("span", { class: "ref t-label-m" }, (me.role === "admin" ? "ADMIN" : "RESPONSABLE") + " · " + me.name)),
       h("div", { style: "display:flex;gap:8px" },
+        h("button", { class: "icon-btn", title: "Mon app tech", onclick: () => navigate("/home") }, icon("assignment", 18)),
         h("button", { class: "icon-btn", title: "Tableau de bord", onclick: () => navigate("/admin/dashboard") }, icon("speed", 18)),
         h("button", { class: "icon-btn", title: "Déconnexion", onclick: () => { logout(); navigate("/login"); } }, icon("logout", 18)))),
     h("hr", { class: "hairline" }),

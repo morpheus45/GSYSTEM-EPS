@@ -60,8 +60,13 @@ export async function homeView() {
         h("span", { class: "live-dot" }),
         h("span", { class: "ref t-label-m" }, CONFIG.ORG),
         h("span", { class: "status t-label-m" }, "· OPÉRATIONNEL")),
-      h("button", { class: "icon-btn", title: "Réglages", onclick: () => navigate("/settings") },
-        icon("settings", 18))
+      h("div", { style: "display:flex;gap:8px" },
+        user.role !== "tech"
+          ? h("button", { class: "icon-btn", title: "Retour gestion", onclick: () => navigate("/admin") },
+              icon("group", 18))
+          : null,
+        h("button", { class: "icon-btn", title: "Réglages", onclick: () => navigate("/settings") },
+          icon("settings", 18)))
     ),
     h("hr", { class: "hairline" })
   );

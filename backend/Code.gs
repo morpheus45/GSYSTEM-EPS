@@ -273,12 +273,22 @@ function deleteEntry(me, kind, id) {
 }
 
 /* ====================== FICHIERS (Excel annuel / pièces) ====================== */
+// Garantit un dossier Drive pour l'utilisateur (le crée si absent). Permet à un
+// admin/responsable qui utilise AUSSI l'app tech d'avoir son propre dossier.
+function ensureUserFolder(userId) {
+  const u = findUserById(userId);
+  if (u && u.driveFolderId) {
+    try { DriveApp.getFolderById(u.driveFolderId); return u.driveFolderId; } catch (e) {}
+  }
+  const folder = DriveApp.getFolderById(CONFIG.DRIVE_ROOT_FOLDER_ID).createFolder(u.name);
+  setUserFields(userId, { driveFolderId: folder.getId(), driveUrl: folder.getUrl() });
+  return folder.getId();
+}
+
 // Le tech dépose son .xlsm 1×/an : on le stocke dans SON dossier Drive et on
 // le référence dans l'onglet Files. Remplace l'ancien modèle de même `kind`.
 function uploadFile(me, p) {
-  const u = findUserById(me.id);
-  if (!u.driveFolderId) throw new Error("Aucun dossier Drive (compte non-tech ?).");
-  const folder = DriveApp.getFolderById(u.driveFolderId);
+  const folder = DriveApp.getFolderById(ensureUserFolder(me.id));
   const bytes = Utilities.base64Decode(p.base64);
   const mime = p.mimeType || "application/vnd.ms-excel.sheet.macroEnabled.12";
   const blob = Utilities.newBlob(bytes, mime, p.filename || "modele.xlsm");
@@ -310,8 +320,6 @@ function listFiles(me, userId) {
 function send(me, p) {
   // Viber : pas d'API publique → on journalise le message (à relayer manuellement
   // ou via une intégration tierce). Les mails GS/EPS partent réellement par Gmail.
-  const folderId = findUserById(me.id).driveFolderId;
-
   if (p.type === "viber") {
     log("viber/" + p.channel, me.email, p.message || "");
     return { ok: true, channel: p.channel };
@@ -324,8 +332,9 @@ function send(me, p) {
     const attachments = [];
 
     // ENVOI MENSUEL : on archive une copie de vérification dans le Drive du tech
-    // (sous-dossier daté) + on la joint au mail.
-    if (p.channel === "mensuel" && folderId) {
+    // (sous-dossier daté, créé si besoin) + on la joint au mail.
+    if (p.channel === "mensuel") {
+      const folderId = ensureUserFolder(me.id);
       const arch = archiveMensuel(me, folderId, p.payload || {});
       attachments.push(arch.csvBlob);
       if (arch.xlsmBlob) attachments.push(arch.xlsmBlob);
