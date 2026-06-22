@@ -21,7 +21,11 @@ const CONFIG = {
   DRIVE_ROOT_FOLDER_ID: "METTRE_ICI_L_ID_DU_DOSSIER_DRIVE",
 
   // Admin de départ (créé par setup()). Tu pourras en créer d'autres ensuite.
-  BOOTSTRAP_ADMIN: { name: "Cedric Lago Gomez", email: "admin@gsystem.fr", password: "change-moi" },
+  // ⚠ Repo PUBLIC : ne PAS committer le mot de passe ici. Remplace
+  //   "A_COLLER_DANS_APPS_SCRIPT" par ton mot de passe UNIQUEMENT dans l'éditeur
+  //   Apps Script (privé), avant de lancer setup(). Il sera à changer à la 1re
+  //   connexion pour ≥ 12 caractères.
+  BOOTSTRAP_ADMIN: { name: "Cedric Lago Gomez", email: "ISTGS54@outlook.com", password: "A_COLLER_DANS_APPS_SCRIPT" },
 
   // Destinataires fixes (cf. HANDOFF.md §5). Les mails partent automatiquement ici.
   MAIL: {
@@ -30,7 +34,9 @@ const CONFIG = {
     EPS_CC1: "johanna@fggestion.fr",
   },
 
-  SALT: "gsystem-sel-a-changer", // change cette chaîne avant le 1er setup()
+  // ⚠ Repo PUBLIC : ne PAS committer le SALT. Colle une valeur secrète dans
+  //   l'éditeur Apps Script (privé) avant le 1er setup(), puis ne plus la changer.
+  SALT: "A_COLLER_DANS_APPS_SCRIPT",
 };
 
 const DB_NAME = "GSYSTEM-DB";
