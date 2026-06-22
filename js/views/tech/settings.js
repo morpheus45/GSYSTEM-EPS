@@ -41,7 +41,9 @@ export function settingsView() {
       field("Responsable secteur (email en copie EPS)", respSecteur, { req: true }),
       field("Code tech", codeTech, { req: true }),
       h("button", { class: "btn sm", style: "margin-top:6px", onclick: save }, "Enregistrer")),
-    h("button", { class: "btn danger", onclick: () => { logout(); navigate("/login"); } }, "Se déconnecter"),
+    h("button", { class: "btn ghost", onclick: () => navigate("/change-password") }, "Changer mon mot de passe"),
+    h("button", { class: "btn ghost", style: "margin-top:8px", onclick: () => navigate("/privacy") }, "Confidentialité & RGPD"),
+    h("button", { class: "btn danger", style: "margin-top:8px", onclick: () => { logout(); navigate("/login"); } }, "Se déconnecter"),
     h("p", { class: "text-low", style: "text-align:center;font-size:11px;margin-top:14px" },
       `G-Systems v${CONFIG.APP_VERSION}`),
   ]);

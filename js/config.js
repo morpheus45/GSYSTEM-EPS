@@ -15,6 +15,14 @@ export const CONFIG = {
 
   APP_VERSION: "1.0.0",
 
+  // --- Informations légales / RGPD (À VALIDER par le responsable de traitement) ---
+  LEGAL: {
+    CONTROLLER: "G-Systems FR",            // responsable de traitement
+    CONTACT_EMAIL: "cedric.lago@gmail.com", // contact pour exercer ses droits (accès/effacement)
+    RETENTION: "5 ans (obligations comptables et sociales), puis suppression",
+    HOSTING: "Google (Drive, Gmail, Apps Script) — données dans l'UE selon la configuration du compte",
+  },
+
   // Cycle de paie par défaut : du 21 au 20 (cf. HANDOFF.md §5).
   DEFAULT_CYCLE_START_DAY: 21,
 };

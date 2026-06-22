@@ -66,6 +66,7 @@ function dispatch(action, params, token) {
     case "getUserData":return getUserData(requireUser(me), params.userId);
     case "pushEntries":return pushEntries(requireUser(me), params.kind, params.entries);
     case "deleteEntry":return deleteEntry(requireUser(me), params.kind, params.id);
+    case "changePassword": return changePassword(requireUser(me), params);
     case "uploadFile": return uploadFile(requireUser(me), params);
     case "listFiles":  return listFiles(requireUser(me), params.userId);
     case "send":       return send(requireUser(me), params);
@@ -74,14 +75,19 @@ function dispatch(action, params, token) {
 }
 
 /* ====================== AUTH / SESSIONS ====================== */
-function hash(pw) {
-  const raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, pw + CONFIG.SALT);
+const SESSION_TTL_DAYS = 30; // une session expire après 30 jours
+
+// Hachage SHA-256 avec sel PAR UTILISATEUR + poivre global (CONFIG.SALT).
+// Le sel par compte évite qu'un même mot de passe donne le même hash.
+function hashWithSalt(pw, salt) {
+  const raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, pw + "|" + salt + "|" + CONFIG.SALT);
   return raw.map(function (b) { return ("0" + (b & 0xff).toString(16)).slice(-2); }).join("");
 }
+function newSalt() { return Utilities.getUuid().replace(/-/g, ""); }
 
 function login(email, password) {
   const u = findUserByEmail(email);
-  if (!u || u.passwordHash !== hash(password)) throw new Error("Email ou mot de passe incorrect.");
+  if (!u || u.passwordHash !== hashWithSalt(password, u.salt || "")) throw new Error("Email ou mot de passe incorrect.");
   if (u.status === "inactive") throw new Error("Accès désactivé. Contactez votre administrateur.");
   const token = Utilities.getUuid();
   appendRow("Sessions", [token, u.id, new Date().toISOString()]);
@@ -92,6 +98,9 @@ function sessionUser(token) {
   const rows = sheet("Sessions").getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
     if (rows[i][0] === token) {
+      // expiration de session
+      const age = (Date.now() - new Date(rows[i][2]).getTime()) / 86400000;
+      if (age > SESSION_TTL_DAYS) return null;
       const u = findUserById(rows[i][1]);
       // accès coupé immédiatement si le compte a été désactivé entre-temps
       if (u && u.status === "inactive") return null;
@@ -99,6 +108,33 @@ function sessionUser(token) {
     }
   }
   return null;
+}
+
+// Changement de mot de passe (obligatoire à la 1re connexion). Vérifie l'ancien,
+// applique la politique de robustesse, régénère le sel, lève le flag.
+function changePassword(me, p) {
+  const u = findUserById(me.id);
+  if (!u || u.passwordHash !== hashWithSalt(p.currentPassword || "", u.salt || ""))
+    throw new Error("Mot de passe actuel incorrect.");
+  const errs = passwordPolicyErrors(p.newPassword, u.email);
+  if (errs.length) throw new Error("Mot de passe trop faible : il faut " + errs.join(", ") + ".");
+  const salt = newSalt();
+  setUserFields(u.id, { salt: salt, passwordHash: hashWithSalt(p.newPassword, salt), mustChangePassword: "" });
+  log("changePassword", me.email, "");
+  return { ok: true };
+}
+
+// Politique serveur (miroir de js/business/password.js).
+function passwordPolicyErrors(pw, email) {
+  pw = pw || ""; const e = [];
+  if (pw.length < 12) e.push("au moins 12 caractères");
+  if (!/[a-z]/.test(pw)) e.push("une minuscule");
+  if (!/[A-Z]/.test(pw)) e.push("une majuscule");
+  if (!/[0-9]/.test(pw)) e.push("un chiffre");
+  if (!/[^A-Za-z0-9]/.test(pw)) e.push("un caractère spécial");
+  if (email && pw.toLowerCase().indexOf(String(email).split("@")[0].toLowerCase()) >= 0)
+    e.push("ne pas contenir l'identifiant");
+  return e;
 }
 function requireUser(me) { if (!me) throw new Error("Session expirée."); return publicUser(me); }
 function requireRole(me, roles) {
@@ -124,43 +160,66 @@ function createUser(me, p) {
     driveId = folder.getId();
     driveUrl = folder.getUrl();
   }
+  const errs = passwordPolicyErrors(p.password, p.email);
+  if (errs.length) throw new Error("Mot de passe initial trop faible : il faut " + errs.join(", ") + ".");
+  const salt = newSalt();
   appendRow("Users", [
-    id, p.name, p.email, hash(p.password), p.role,
+    id, p.name, p.email, hashWithSalt(p.password, salt), p.role,
     p.responsableId || "", p.codeTech || "", driveId, driveUrl, new Date().toISOString(),
-    "active",
+    "active", salt, "true",
   ]);
   log("createUser", me.email, p.email + " (" + p.role + ")");
   return publicUser(findUserById(id));
 }
 
 function updateUser(me, p) {
-  const sh = sheet("Users");
-  const rows = sh.getDataRange().getValues();
-  for (let i = 1; i < rows.length; i++) {
-    if (rows[i][0] === p.id) {
-      const patch = p.patch || {};
-      if (patch.name != null) rows[i][1] = patch.name;
-      if (patch.email != null) rows[i][2] = patch.email;
-      if (patch.password) rows[i][3] = hash(patch.password);
-      if (patch.role != null) rows[i][4] = patch.role;
-      if (patch.responsableId !== undefined) rows[i][5] = patch.responsableId || "";
-      if (patch.codeTech != null) rows[i][6] = patch.codeTech;
-      if (patch.status != null) rows[i][10] = patch.status;
-      sh.getRange(i + 1, 1, 1, rows[i].length).setValues([rows[i]]);
-      return publicUser(findUserById(p.id));
-    }
+  const u = findUserById(p.id);
+  if (!u) throw new Error("Utilisateur introuvable.");
+  const patch = p.patch || {};
+  const fields = {};
+  if (patch.name != null) fields.name = patch.name;
+  if (patch.email != null) fields.email = patch.email;
+  if (patch.role != null) fields.role = patch.role;
+  if (patch.responsableId !== undefined) fields.responsableId = patch.responsableId || "";
+  if (patch.codeTech != null) fields.codeTech = patch.codeTech;
+  if (patch.status != null) fields.status = patch.status;
+  if (patch.password) {
+    const errs = passwordPolicyErrors(patch.password, patch.email || u.email);
+    if (errs.length) throw new Error("Mot de passe trop faible : il faut " + errs.join(", ") + ".");
+    const salt = newSalt();
+    fields.salt = salt;
+    fields.passwordHash = hashWithSalt(patch.password, salt);
+    fields.mustChangePassword = "true"; // réinitialisation admin → l'utilisateur devra le changer
   }
-  throw new Error("Utilisateur introuvable.");
+  setUserFields(p.id, fields);
+  return publicUser(findUserById(p.id));
 }
 
+// Effacement RGPD (droit à l'effacement) : supprime le compte, ses données dans
+// toutes les feuilles, ses sessions, et MET À LA CORBEILLE son dossier Drive.
 function deleteUser(me, p) {
-  const sh = sheet("Users");
+  const u = findUserById(p.id);
+  if (!u) return { ok: true };
+
+  // 1. dossier Drive du tech
+  if (u.driveFolderId) { try { DriveApp.getFolderById(u.driveFolderId).setTrashed(true); } catch (e) {} }
+
+  // 2. lignes de données + sessions + fichiers + utilisateur
+  ["Temps", "Frais", "GesteCo", "Compteur", "Files"].forEach(function (name) {
+    deleteRowsWhere(name, 0, p.id); // colonne 0 = userId
+  });
+  deleteRowsWhere("Sessions", 1, p.id); // colonne 1 = userId
+  deleteRowsWhere("Users", 0, p.id);
+
+  log("deleteUser(RGPD)", me.email, p.id);
+  return { ok: true };
+}
+function deleteRowsWhere(name, col, value) {
+  const sh = sheet(name);
   const rows = sh.getDataRange().getValues();
   for (let i = rows.length - 1; i >= 1; i--) {
-    if (rows[i][0] === p.id) sh.deleteRow(i + 1);
+    if (rows[i][col] === value) sh.deleteRow(i + 1);
   }
-  log("deleteUser", me.email, p.id);
-  return { ok: true };
 }
 
 /* ====================== DONNÉES TECH (au fil de l'eau) ====================== */
@@ -371,6 +430,23 @@ function findUserByEmail(email) {
 function findUserById(id) {
   return readAll("Users").filter(function (u) { return u.id === id; })[0] || null;
 }
+// Écrit des champs d'un utilisateur par NOM de colonne (robuste à l'ordre).
+function setUserFields(id, fields) {
+  const sh = sheet("Users");
+  const data = sh.getDataRange().getValues();
+  const head = data[0];
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === id) {
+      Object.keys(fields).forEach(function (k) {
+        const c = head.indexOf(k);
+        if (c >= 0) data[i][c] = fields[k];
+      });
+      sh.getRange(i + 1, 1, 1, data[i].length).setValues([data[i]]);
+      return true;
+    }
+  }
+  return false;
+}
 function publicUser(u) {
   if (!u) return null;
   return {
@@ -378,6 +454,7 @@ function publicUser(u) {
     responsableId: u.responsableId || null, codeTech: u.codeTech || "",
     driveUrl: u.driveUrl || "", createdAt: u.createdAt,
     status: u.status || "active",
+    mustChangePassword: String(u.mustChangePassword) === "true",
   };
 }
 function log(action, who, detail) {
@@ -388,7 +465,7 @@ function log(action, who, detail) {
 function setup() {
   const ss = db();
   const headers = {
-    Users: ["id", "name", "email", "passwordHash", "role", "responsableId", "codeTech", "driveFolderId", "driveUrl", "createdAt", "status"],
+    Users: ["id", "name", "email", "passwordHash", "role", "responsableId", "codeTech", "driveFolderId", "driveUrl", "createdAt", "status", "salt", "mustChangePassword"],
     Temps: ["userId", "id", "date", "json", "ts"],
     Frais: ["userId", "id", "date", "json", "ts"],
     GesteCo: ["userId", "id", "date", "json", "ts"],
@@ -406,12 +483,13 @@ function setup() {
     const s = ss.getSheetByName(n); if (s && ss.getSheets().length > 1) ss.deleteSheet(s);
   });
 
-  // Admin de départ
+  // Admin de départ (devra changer son mot de passe à la 1re connexion)
   if (!findUserByEmail(CONFIG.BOOTSTRAP_ADMIN.email)) {
+    const salt = newSalt();
     appendRow("Users", [
       "u_admin", CONFIG.BOOTSTRAP_ADMIN.name, CONFIG.BOOTSTRAP_ADMIN.email,
-      hash(CONFIG.BOOTSTRAP_ADMIN.password), "admin", "", "", "", "", new Date().toISOString(),
-      "active",
+      hashWithSalt(CONFIG.BOOTSTRAP_ADMIN.password, salt), "admin", "", "", "", "", new Date().toISOString(),
+      "active", salt, "true",
     ]);
   }
   Logger.log("Setup OK. Base : " + ss.getUrl());

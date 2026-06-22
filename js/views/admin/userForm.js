@@ -66,7 +66,9 @@ export async function userFormView(userId) {
       field("Rôle", role, { req: true }),
       respField, codeField),
     h("div", { class: "banner amber" },
-      "À la création d'un technicien, un dossier Drive à son nom est créé automatiquement."),
+      "Mot de passe initial : au moins 12 caractères (majuscule, minuscule, chiffre, spécial). "
+      + "L'utilisateur devra le changer à sa première connexion. À la création d'un technicien, "
+      + "un dossier Drive à son nom est créé automatiquement."),
     h("button", { class: "btn", onclick: submit }, editing ? "Enregistrer" : "Créer l'accès + dossier Drive"),
   ], { back: "/admin" });
 

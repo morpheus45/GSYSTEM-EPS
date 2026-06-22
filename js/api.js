@@ -2,6 +2,7 @@
 // Tant que CONFIG.BACKEND_URL est vide → MODE DÉMO (données locales factices).
 import { CONFIG, DEMO } from "./config.js";
 import { todayIso } from "./business/dates.js";
+import { checkPassword } from "./business/password.js";
 
 const LS_KEY = "gsystem_demo_db_v1";
 
@@ -49,7 +50,8 @@ function seedDb() {
       { id: "u_tech", name: "Tech Démo", email: "tech@gsystem.fr", password: "tech",
         role: "tech", responsableId: "u_resp", codeTech: "ISTGS54", driveUrl: "#", createdAt: todayIso(), status: "active" },
       { id: "u_tech2", name: "Paul Bernard", email: "paul@gsystem.fr", password: "paul",
-        role: "tech", responsableId: "u_resp", codeTech: "ISTGS61", driveUrl: "#", createdAt: todayIso(), status: "active" },
+        role: "tech", responsableId: "u_resp", codeTech: "ISTGS61", driveUrl: "#", createdAt: todayIso(),
+        status: "active", mustChangePassword: true },
     ],
     data: { u_tech: techData("Tech Démo"), u_tech2: techData("Paul Bernard") },
   };
@@ -99,10 +101,13 @@ function demo(action, params, token) {
       if (!me || me.role !== "admin") throw new Error("Seul l'admin peut créer un compte.");
       if (db.users.some((u) => u.email.toLowerCase() === params.email.toLowerCase()))
         throw new Error("Cet email existe déjà.");
+      const pc = checkPassword(params.password, { email: params.email });
+      if (!pc.ok) throw new Error("Mot de passe initial trop faible : il faut " + pc.errors.join(", ") + ".");
       const u = {
         id: uid(), name: params.name, email: params.email, password: params.password,
         role: params.role, responsableId: params.responsableId || null,
         codeTech: params.codeTech || "", createdAt: todayIso(), status: "active",
+        mustChangePassword: true,
         driveUrl: "#dossier-drive-" + encodeURIComponent(params.name),
       };
       db.users.push(u);
@@ -151,6 +156,17 @@ function demo(action, params, token) {
       if (!me) throw new Error("Session expirée.");
       const bucket = db.data[me.id]; if (bucket && bucket[params.kind])
         bucket[params.kind] = bucket[params.kind].filter((x) => x.id !== params.id);
+      saveDb(db);
+      return { ok: true };
+    }
+    case "changePassword": {
+      if (!me) throw new Error("Session expirée.");
+      const full = db.users.find((x) => x.id === me.id);
+      if (!full || full.password !== params.currentPassword) throw new Error("Mot de passe actuel incorrect.");
+      const pc = checkPassword(params.newPassword, { email: full.email });
+      if (!pc.ok) throw new Error("Mot de passe trop faible : il faut " + pc.errors.join(", ") + ".");
+      full.password = params.newPassword;
+      full.mustChangePassword = false;
       saveDb(db);
       return { ok: true };
     }

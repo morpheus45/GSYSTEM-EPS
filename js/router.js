@@ -4,6 +4,8 @@ import { mount, overlay, toast } from "./ui.js";
 
 // vues
 import { loginView } from "./views/login.js";
+import { changePasswordView } from "./views/changePassword.js";
+import { privacyView } from "./views/legal/privacy.js";
 import { homeView } from "./views/tech/home.js";
 import { clotureView } from "./views/tech/cloture.js";
 import { attenteView } from "./views/tech/attente.js";
@@ -20,6 +22,8 @@ import { adminDashboardView } from "./views/admin/dashboard.js";
 // table : pattern (regex sur le path) → { roles, view }
 const ROUTES = [
   { re: /^\/login$/, roles: "*", view: () => loginView() },
+  { re: /^\/privacy$/, roles: "*", view: () => privacyView() },
+  { re: /^\/change-password$/, roles: ["tech", "responsable", "admin"], view: () => changePasswordView() },
 
   // TECH
   { re: /^\/home$/, roles: ["tech"], view: () => homeView() },
@@ -57,6 +61,10 @@ export async function render() {
   if (!user && path !== "/login") return navigate("/login");
   // connecté mais sur /login → route par défaut du rôle
   if (user && path === "/login") return navigate(defaultRouteFor(user));
+
+  // 1re connexion : changement de mot de passe obligatoire (RGPD/sécurité)
+  if (user && user.mustChangePassword && path !== "/change-password" && path !== "/privacy")
+    return navigate("/change-password");
 
   const match = ROUTES.map((r) => ({ r, m: path.match(r.re) })).find((x) => x.m);
   if (!match) return navigate(defaultRouteFor(user));

@@ -33,7 +33,10 @@ export function loginView() {
     h("label", { class: "field" }, h("span", { class: "lab" }, "Mot de passe"), pass),
     btn,
     h("p", { class: "tag", style: "text-align:center;margin-top:18px" },
-      "Accès créés par votre administrateur")
+      "Accès créés par votre administrateur"),
+    h("a", { href: "#/privacy", class: "tag",
+      style: "display:block;text-align:center;margin-top:10px;color:var(--text-low);text-decoration:underline" },
+      "Confidentialité & RGPD")
   );
 
   return h("div", { class: "screen" },

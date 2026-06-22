@@ -57,6 +57,9 @@ export async function adminTreeView() {
   if (inactiveTechs.length) {
     body.append(section("Techniciens inactifs · plus là", inactiveTechs.map((u) => leaf(u, true))));
   }
+  body.append(h("a", { href: "#/privacy", class: "tag",
+    style: "display:block;text-align:center;margin:18px 0 8px;color:var(--text-low);text-decoration:underline" },
+    "Confidentialité & RGPD"));
 
   screen.append(body);
 

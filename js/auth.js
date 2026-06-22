@@ -19,6 +19,11 @@ export function logout() {
   _user = null;
 }
 
+/** Met à jour l'état local après un changement de mot de passe réussi. */
+export function markPasswordChanged() {
+  if (_user) _user.mustChangePassword = false;
+}
+
 /** Restaure la session au démarrage (valide le token auprès du backend). */
 export async function restore() {
   const tk = token();
