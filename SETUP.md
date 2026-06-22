@@ -44,12 +44,14 @@ un dossier Drive créé automatiquement pour chaque technicien.
 
 ## C. Brancher l'app sur le backend (1 min)
 
-1. Ouvre [`js/config.js`](js/config.js).
-2. Colle l'URL `/exec` dans `BACKEND_URL` :
-   ```js
-   BACKEND_URL: "https://script.google.com/macros/s/AKfy.../exec",
-   ```
-3. Enregistre. Le mode démo se désactive tout seul ; l'app parle maintenant au backend.
+**Le plus simple — directement dans l'app (aucun code) :**
+1. Ouvre l'app, en bas de l'écran de connexion clique **« ⚙ Configurer le serveur »**.
+2. Colle l'URL `/exec`, clique **« Tester la connexion »** (✓ vert attendu), puis
+   **« Enregistrer & connecter »**. C'est branché sur cet appareil.
+
+> Ce réglage est propre à l'appareil (pratique pour tester tout de suite).
+> Pour que **tous** les utilisateurs soient connectés automatiquement, mets aussi
+> l'URL dans le code : [`js/config.js`](js/config.js) → `BACKEND_URL: "…/exec"`.
 
 ---
 

@@ -1,6 +1,7 @@
 import { h, mount, overlay, toast } from "../ui.js";
 import { login } from "../auth.js";
 import { navigate, defaultRouteFor } from "../router.js";
+import { isDemo } from "../config.js";
 
 export function loginView() {
   overlay(false);
@@ -36,7 +37,10 @@ export function loginView() {
       "Accès créés par votre administrateur"),
     h("a", { href: "#/privacy", class: "tag",
       style: "display:block;text-align:center;margin-top:10px;color:var(--text-low);text-decoration:underline" },
-      "Confidentialité & RGPD")
+      "Confidentialité & RGPD"),
+    h("a", { href: "#/setup-backend", class: "tag",
+      style: "display:block;text-align:center;margin-top:8px;color:var(--text-low);text-decoration:underline" },
+      "⚙ Configurer le serveur")
   );
 
   return h("div", { class: "screen" },
@@ -44,6 +48,8 @@ export function loginView() {
       h("img", { class: "logo", src: "icons/icon-512.png", alt: "G-Systems" }),
       h("h1", {}, "G-SYSTEMS"),
       h("div", { class: "tag" }, "Sécurité électronique"),
+      isDemo() ? h("div", { class: "banner amber", style: "max-width:360px;text-align:center" },
+        "Mode démo — backend non connecté. ⚙ « Configurer le serveur » ci-dessous.") : null,
       form
     )
   );

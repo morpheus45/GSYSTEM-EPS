@@ -1,5 +1,5 @@
 // Bootstrap G-Systems.
-import { DEMO } from "./config.js";
+import { isDemo } from "./config.js";
 import { restore } from "./auth.js";
 import { render, navigate, defaultRouteFor } from "./router.js";
 import { flushQueue } from "./store.js";
@@ -16,7 +16,7 @@ if ("serviceWorker" in navigator) {
   const user = await restore();
   if (user) flushQueue();
 
-  if (DEMO) {
+  if (isDemo()) {
     setTimeout(() => toast("Mode démo — comptes : admin@gsystem.fr / resp@gsystem.fr / tech@gsystem.fr (mot de passe = avant le @)", 6000), 600);
   }
 

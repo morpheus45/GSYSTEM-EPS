@@ -1,6 +1,6 @@
 // API — couche d'accès au backend Google Apps Script.
 // Tant que CONFIG.BACKEND_URL est vide → MODE DÉMO (données locales factices).
-import { CONFIG, DEMO } from "./config.js";
+import { getBackendUrl, isDemo } from "./config.js";
 import { todayIso } from "./business/dates.js";
 import { checkPassword } from "./business/password.js";
 
@@ -10,7 +10,7 @@ const LS_KEY = "gsystem_demo_db_v1";
 //  MODE LIVE — appels au backend Apps Script (POST JSON, action+params)
 // ----------------------------------------------------------------
 async function callBackend(action, params = {}, token = null) {
-  const res = await fetch(CONFIG.BACKEND_URL, {
+  const res = await fetch(getBackendUrl(), {
     method: "POST",
     headers: { "Content-Type": "text/plain;charset=utf-8" }, // évite le preflight CORS
     body: JSON.stringify({ action, token, params }),
@@ -202,7 +202,7 @@ function demo(action, params, token) {
 //  Façade unique
 // ----------------------------------------------------------------
 export async function api(action, params = {}, token = null) {
-  if (DEMO) {
+  if (isDemo()) {
     // micro-latence pour réalisme
     await new Promise((r) => setTimeout(r, 120));
     return demo(action, params, token);

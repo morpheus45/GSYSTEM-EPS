@@ -6,6 +6,7 @@ import { mount, overlay, toast } from "./ui.js";
 import { loginView } from "./views/login.js";
 import { changePasswordView } from "./views/changePassword.js";
 import { privacyView } from "./views/legal/privacy.js";
+import { setupBackendView } from "./views/setupBackend.js";
 import { homeView } from "./views/tech/home.js";
 import { clotureView } from "./views/tech/cloture.js";
 import { attenteView } from "./views/tech/attente.js";
@@ -23,6 +24,7 @@ import { adminDashboardView } from "./views/admin/dashboard.js";
 const ROUTES = [
   { re: /^\/login$/, roles: "*", view: () => loginView() },
   { re: /^\/privacy$/, roles: "*", view: () => privacyView() },
+  { re: /^\/setup-backend$/, roles: "*", view: () => setupBackendView() },
   { re: /^\/change-password$/, roles: ["tech", "responsable", "admin"], view: () => changePasswordView() },
 
   // TECH
@@ -57,8 +59,9 @@ export async function render() {
   const user = currentUser();
   let path = location.hash.replace(/^#/, "") || "/login";
 
-  // pas connecté → login forcé
-  if (!user && path !== "/login") return navigate("/login");
+  // pas connecté → seuls les écrans publics sont accessibles
+  const PUBLIC = ["/login", "/privacy", "/setup-backend"];
+  if (!user && PUBLIC.indexOf(path) < 0) return navigate("/login");
   // connecté mais sur /login → route par défaut du rôle
   if (user && path === "/login") return navigate(defaultRouteFor(user));
 

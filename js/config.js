@@ -27,5 +27,18 @@ export const CONFIG = {
   DEFAULT_CYCLE_START_DAY: 21,
 };
 
-// MODE DÉMO actif tant qu'aucun backend n'est configuré.
-export const DEMO = !CONFIG.BACKEND_URL;
+// URL backend « effective » : priorité à celle configurée dans l'app (écran
+// « Configurer le serveur », stockée sur l'appareil), sinon celle du code.
+// → permet de brancher le backend sans toucher au code (pratique pour tester).
+const LS_BACKEND = "gsystem_backend_url";
+
+export function getBackendUrl() {
+  try { return (localStorage.getItem(LS_BACKEND) || CONFIG.BACKEND_URL || "").trim(); }
+  catch { return CONFIG.BACKEND_URL || ""; }
+}
+export function setBackendUrl(url) {
+  if (url && url.trim()) localStorage.setItem(LS_BACKEND, url.trim());
+  else localStorage.removeItem(LS_BACKEND);
+}
+// MODE DÉMO actif tant qu'aucun backend n'est configuré (ni code, ni appareil).
+export function isDemo() { return !getBackendUrl(); }
