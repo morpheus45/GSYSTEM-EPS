@@ -2,7 +2,7 @@ import { h, toast, overlay } from "../../ui.js";
 import { screen, field } from "../shell.js";
 import { navigate } from "../../router.js";
 import { api } from "../../api.js";
-import { token } from "../../auth.js";
+import { token, currentUser } from "../../auth.js";
 
 // Création / édition d'un accès (admin). À la création d'un tech, le backend
 // crée un VRAI dossier Drive à son nom.
@@ -17,10 +17,15 @@ export async function userFormView(userId) {
   const pass = h("input", { type: "text", placeholder: editing ? "(laisser vide = inchangé)" : "mot de passe" });
   const codeTech = h("input", { value: u?.codeTech || "", placeholder: "ISTGSxx" });
 
-  const role = h("select", {},
+  // Seul un Super admin peut accorder le rôle Super admin (anti-escalade).
+  const iAmSuper = currentUser().role === "admin";
+  const roleOpts = [
     h("option", { value: "tech", selected: !u || u.role === "tech" }, "Technicien"),
     h("option", { value: "responsable", selected: u?.role === "responsable" }, "Responsable"),
-    h("option", { value: "admin", selected: u?.role === "admin" }, "Admin"));
+    h("option", { value: "direction", selected: u?.role === "direction" }, "Direction"),
+  ];
+  if (iAmSuper) roleOpts.push(h("option", { value: "admin", selected: u?.role === "admin" }, "Super admin"));
+  const role = h("select", {}, ...roleOpts);
 
   const respSel = h("select", {},
     h("option", { value: "" }, "— aucun —"),

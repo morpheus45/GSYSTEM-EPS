@@ -73,7 +73,8 @@ export async function userDetailView(userId) {
     body.splice(1, 0, h("div", { class: "banner amber" }, "Compte inactif · accès coupé (« plus là »)."));
   }
 
-  if (me.role === "admin") {
+  const canManage = me.role === "admin" || me.role === "direction";
+  if (canManage) {
     actions = h("button", { class: "icon-btn", title: "Modifier", onclick: () => navigate("/admin/edit/" + u.id) }, icon("settings", 18));
 
     const setStatus = async (status, msg) => {
@@ -93,14 +94,17 @@ export async function userDetailView(userId) {
         } }, "Désactiver (couper l'accès)"));
     }
 
-    body.push(
-      h("button", { class: "btn danger", style: "margin-top:8px", onclick: async () => {
-        if (!confirm(`SUPPRIMER DÉFINITIVEMENT ${u.name} ? Cette action efface le compte et ne peut pas être annulée. (Préférer « Désactiver ».)`)) return;
-        try { overlay(true); await api("deleteUser", { id: u.id }, token()); overlay(false);
-          toast("Compte supprimé définitivement"); navigate("/admin"); }
-        catch (e) { overlay(false); toast(e.message); }
-      } }, "Supprimer définitivement")
-    );
+    // Suppression définitive : Super admin UNIQUEMENT (action « qui plante »)
+    if (me.role === "admin") {
+      body.push(
+        h("button", { class: "btn danger", style: "margin-top:8px", onclick: async () => {
+          if (!confirm(`SUPPRIMER DÉFINITIVEMENT ${u.name} ? Cette action efface le compte et ne peut pas être annulée. (Préférer « Désactiver ».)`)) return;
+          try { overlay(true); await api("deleteUser", { id: u.id }, token()); overlay(false);
+            toast("Compte supprimé définitivement"); navigate("/admin"); }
+          catch (e) { overlay(false); toast(e.message); }
+        } }, "Supprimer définitivement")
+      );
+    }
   }
 
   overlay(false);

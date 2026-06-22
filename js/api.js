@@ -98,7 +98,7 @@ function demo(action, params, token) {
       return { users };
     }
     case "createUser": {
-      if (!me || me.role !== "admin") throw new Error("Seul l'admin peut créer un compte.");
+      if (!me || (me.role !== "admin" && me.role !== "direction")) throw new Error("Accès refusé.");
       if (db.users.some((u) => u.email.toLowerCase() === params.email.toLowerCase()))
         throw new Error("Cet email existe déjà.");
       const pc = checkPassword(params.password, { email: params.email });
@@ -116,7 +116,7 @@ function demo(action, params, token) {
       return publicUser(u);
     }
     case "updateUser": {
-      if (!me || me.role !== "admin") throw new Error("Accès refusé.");
+      if (!me || (me.role !== "admin" && me.role !== "direction")) throw new Error("Accès refusé.");
       const u = db.users.find((x) => x.id === params.id);
       if (!u) throw new Error("Utilisateur introuvable.");
       Object.assign(u, params.patch || {});

@@ -25,7 +25,7 @@ const CONFIG = {
   //   "A_COLLER_DANS_APPS_SCRIPT" par ton mot de passe UNIQUEMENT dans l'éditeur
   //   Apps Script (privé), avant de lancer setup(). Il sera à changer à la 1re
   //   connexion pour ≥ 12 caractères.
-  BOOTSTRAP_ADMIN: { name: "Cedric Lago Gomez", email: "ISTGS54@outlook.com", password: "A_COLLER_DANS_APPS_SCRIPT" },
+  BOOTSTRAP_ADMIN: { name: "Cedric Lago Gomez", email: "ISTGS54@outlook.com", password: "REMPLACER_MDP_ADMIN" },
 
   // Destinataires fixes (cf. HANDOFF.md §5). Les mails partent automatiquement ici.
   MAIL: {
@@ -36,7 +36,7 @@ const CONFIG = {
 
   // ⚠ Repo PUBLIC : ne PAS committer le SALT. Colle une valeur secrète dans
   //   l'éditeur Apps Script (privé) avant le 1er setup(), puis ne plus la changer.
-  SALT: "A_COLLER_DANS_APPS_SCRIPT",
+  SALT: "REMPLACER_SALT_SECRET",
 };
 
 const DB_NAME = "GSYSTEM-DB";
@@ -65,10 +65,10 @@ function dispatch(action, params, token) {
   switch (action) {
     case "login":      return login(params.email, params.password);
     case "me":         return requireUser(me);
-    case "tree":       return tree(requireRole(me, ["admin", "responsable"]));
-    case "createUser": return createUser(requireRole(me, ["admin"]), params);
-    case "updateUser": return updateUser(requireRole(me, ["admin"]), params);
-    case "deleteUser": return deleteUser(requireRole(me, ["admin"]), params);
+    case "tree":       return tree(requireRole(me, ["admin", "direction", "responsable"]));
+    case "createUser": return createUser(requireRole(me, ["admin", "direction"]), params);
+    case "updateUser": return updateUser(requireRole(me, ["admin", "direction"]), params);
+    case "deleteUser": return deleteUser(requireRole(me, ["admin"]), params); // suppression = Super admin uniquement
     case "getUserData":return getUserData(requireUser(me), params.userId);
     case "pushEntries":return pushEntries(requireUser(me), params.kind, params.entries);
     case "deleteEntry":return deleteEntry(requireUser(me), params.kind, params.id);

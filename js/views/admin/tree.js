@@ -4,13 +4,13 @@ import { navigate } from "../../router.js";
 import { api } from "../../api.js";
 import { token } from "../../auth.js";
 
-const ROLE_LABEL = { admin: "Admin", responsable: "Responsable", tech: "Technicien" };
+const ROLE_LABEL = { admin: "Super admin", direction: "Direction", responsable: "Responsable", tech: "Technicien" };
 
 export async function adminTreeView() {
   const me = currentUser();
   const { users } = await api("tree", {}, token());
 
-  const admins = users.filter((u) => u.role === "admin");
+  const admins = users.filter((u) => u.role === "admin" || u.role === "direction");
   const resps = users.filter((u) => u.role === "responsable");
   const techs = users.filter((u) => u.role === "tech");
   const activeTechs = techs.filter((t) => t.status !== "inactive");
@@ -24,7 +24,7 @@ export async function adminTreeView() {
   screen.append(
     h("div", { class: "statusbar" },
       h("div", { class: "live-ref" }, h("span", { class: "live-dot" }),
-        h("span", { class: "ref t-label-m" }, (me.role === "admin" ? "ADMIN" : "RESPONSABLE") + " · " + me.name)),
+        h("span", { class: "ref t-label-m" }, (ROLE_LABEL[me.role] || me.role).toUpperCase() + " · " + me.name)),
       h("div", { style: "display:flex;gap:8px" },
         h("button", { class: "icon-btn", title: "Mon app tech", onclick: () => navigate("/home") }, icon("assignment", 18)),
         h("button", { class: "icon-btn", title: "Tableau de bord", onclick: () => navigate("/admin/dashboard") }, icon("speed", 18)),
@@ -64,8 +64,8 @@ export async function adminTreeView() {
 
   screen.append(body);
 
-  // bouton créer (admin seulement)
-  if (me.role === "admin") {
+  // bouton créer (Super admin + Direction)
+  if (me.role === "admin" || me.role === "direction") {
     screen.append(h("div", { class: "fab" },
       h("button", { class: "btn", onclick: () => navigate("/admin/new") },
         icon("add", 18), "Créer un accès")));

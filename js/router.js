@@ -25,24 +25,24 @@ const ROUTES = [
   { re: /^\/login$/, roles: "*", view: () => loginView() },
   { re: /^\/privacy$/, roles: "*", view: () => privacyView() },
   { re: /^\/setup-backend$/, roles: "*", view: () => setupBackendView() },
-  { re: /^\/change-password$/, roles: ["tech", "responsable", "admin"], view: () => changePasswordView() },
+  { re: /^\/change-password$/, roles: ["tech", "responsable", "admin", "direction"], view: () => changePasswordView() },
 
   // TECH
-  { re: /^\/home$/, roles: ["tech", "admin", "responsable"], view: () => homeView() },
-  { re: /^\/cloture$/, roles: ["tech", "admin", "responsable"], view: () => clotureView() },
-  { re: /^\/attente$/, roles: ["tech", "admin", "responsable"], view: () => attenteView() },
-  { re: /^\/courrier$/, roles: ["tech", "admin", "responsable"], view: () => courrierView() },
-  { re: /^\/recap$/, roles: ["tech", "admin", "responsable"], view: () => recapView() },
-  { re: /^\/frais$/, roles: ["tech", "admin", "responsable"], view: () => fraisView() },
-  { re: /^\/envoi$/, roles: ["tech", "admin", "responsable"], view: () => envoiView() },
-  { re: /^\/settings$/, roles: ["tech", "admin", "responsable"], view: () => settingsView() },
+  { re: /^\/home$/, roles: ["tech", "admin", "direction", "responsable"], view: () => homeView() },
+  { re: /^\/cloture$/, roles: ["tech", "admin", "direction", "responsable"], view: () => clotureView() },
+  { re: /^\/attente$/, roles: ["tech", "admin", "direction", "responsable"], view: () => attenteView() },
+  { re: /^\/courrier$/, roles: ["tech", "admin", "direction", "responsable"], view: () => courrierView() },
+  { re: /^\/recap$/, roles: ["tech", "admin", "direction", "responsable"], view: () => recapView() },
+  { re: /^\/frais$/, roles: ["tech", "admin", "direction", "responsable"], view: () => fraisView() },
+  { re: /^\/envoi$/, roles: ["tech", "admin", "direction", "responsable"], view: () => envoiView() },
+  { re: /^\/settings$/, roles: ["tech", "admin", "direction", "responsable"], view: () => settingsView() },
 
   // ADMIN / RESPONSABLE (arbre + détail)
-  { re: /^\/admin$/, roles: ["admin", "responsable"], view: () => adminTreeView() },
-  { re: /^\/admin\/dashboard$/, roles: ["admin", "responsable"], view: () => adminDashboardView() },
-  { re: /^\/admin\/new$/, roles: ["admin"], view: () => userFormView(null) },
-  { re: /^\/admin\/user\/([^/]+)$/, roles: ["admin", "responsable"], view: (m) => userDetailView(m[1]) },
-  { re: /^\/admin\/edit\/([^/]+)$/, roles: ["admin"], view: (m) => userFormView(m[1]) },
+  { re: /^\/admin$/, roles: ["admin", "direction", "responsable"], view: () => adminTreeView() },
+  { re: /^\/admin\/dashboard$/, roles: ["admin", "direction", "responsable"], view: () => adminDashboardView() },
+  { re: /^\/admin\/new$/, roles: ["admin", "direction"], view: () => userFormView(null) },
+  { re: /^\/admin\/user\/([^/]+)$/, roles: ["admin", "direction", "responsable"], view: (m) => userDetailView(m[1]) },
+  { re: /^\/admin\/edit\/([^/]+)$/, roles: ["admin", "direction"], view: (m) => userFormView(m[1]) },
 ];
 
 export function navigate(path) {
