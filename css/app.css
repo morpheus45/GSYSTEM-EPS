@@ -203,6 +203,26 @@ input::placeholder { color: var(--text-muted); }
 .muted-empty { text-align: center; color: var(--text-low); padding: 40px 20px; font-size: 14px; }
 
 /* ---------- Bannière d'aperçu (super admin « voir comme ») ---------- */
+/* ---------- Filtres de période (chips) ---------- */
+.range-chips { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0 8px; -webkit-overflow-scrolling: touch; }
+.range-chips .chip { flex: none; background: var(--obsidian-1); border: 1px solid var(--hairline);
+  color: var(--text-mid); border-radius: 20px; padding: 7px 13px; font-family: "GeistMono"; font-size: 12px;
+  cursor: pointer; white-space: nowrap; }
+.range-chips .chip.active { background: var(--recap-start); border-color: var(--recap-start); color: #fff; }
+.range-custom { display: flex; gap: 8px; margin-bottom: 10px; }
+.range-custom input { font-size: 13px; padding: 8px 10px; }
+
+/* ---------- Graphiques ---------- */
+.chart-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 10px; justify-content: center; }
+.chart-legend .lg { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-mid); }
+.chart-legend .lg i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+.barlist { display: flex; flex-direction: column; gap: 9px; }
+.barrow { display: grid; grid-template-columns: 90px 1fr auto; gap: 8px; align-items: center; }
+.barrow .bl { font-size: 12px; color: var(--text-mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.barrow .bt { background: var(--obsidian-2); border-radius: 6px; height: 14px; overflow: hidden; }
+.barrow .bt i { display: block; height: 100%; border-radius: 6px; min-width: 2px; }
+.barrow .bv { font-family: "GeistMono"; font-size: 12px; font-weight: 700; color: var(--text-hi); }
+
 .period-nav { display: flex; align-items: center; gap: 10px; margin: 6px 0 12px;
   background: var(--obsidian-1); border: 1px solid var(--hairline); border-radius: var(--r-md); padding: 6px 8px; }
 .period-nav .icon-btn { width: 36px; height: 36px; font-size: 22px; line-height: 1; }
