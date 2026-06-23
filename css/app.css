@@ -201,3 +201,40 @@ input::placeholder { color: var(--text-muted); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .muted-empty { text-align: center; color: var(--text-low); padding: 40px 20px; font-size: 14px; }
+
+/* ---------- Logo animé « gsystems » (repris de l'APK) ---------- */
+.gs-logo { width: 240px; max-width: 72%; height: auto; overflow: visible; display: block; margin: 0 auto; }
+.bl-g {
+  fill: none; stroke: var(--brand-red); stroke-width: 30;
+  stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 560; stroke-dashoffset: 560;
+  animation: bl-draw .7s cubic-bezier(.65,0,.35,1) forwards,
+             bl-ignite .5s ease forwards .9s,
+             bl-breathe 2.8s ease-in-out infinite 1.8s;
+}
+.bl-word {
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-weight: 600; font-size: 62px; letter-spacing: -1px;
+  fill: var(--text-hi); opacity: 0;  /* clair pour le fond sombre */
+  animation: bl-wordin .4s ease forwards .35s,
+             bl-shoot 1.05s cubic-bezier(.5,0,.15,1) forwards 1.3s;
+}
+@keyframes bl-draw { to { stroke-dashoffset: 0; } }
+@keyframes bl-ignite {
+  0% { stroke: #ee2322; filter: drop-shadow(0 0 0 rgba(238,35,34,0)); }
+  100% { stroke: #ff4338; filter: drop-shadow(0 0 12px rgba(238,35,34,.65)); }
+}
+@keyframes bl-breathe {
+  0%,100% { filter: drop-shadow(0 0 6px rgba(238,35,34,.45)); }
+  50% { filter: drop-shadow(0 0 18px rgba(238,35,34,.8)); }
+}
+@keyframes bl-wordin { to { opacity: 1; } }
+@keyframes bl-shoot {
+  0% { transform: translateX(0); } 28% { transform: translateX(-95px); }
+  50% { transform: translateX(-95px); } 82% { transform: translateX(9px); }
+  100% { transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bl-g { animation: none; stroke-dashoffset: 0; }
+  .bl-word { animation: none; opacity: 1; }
+}

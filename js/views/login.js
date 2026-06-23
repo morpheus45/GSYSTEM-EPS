@@ -2,6 +2,7 @@ import { h, mount, overlay, toast } from "../ui.js";
 import { login } from "../auth.js";
 import { navigate, defaultRouteFor } from "../router.js";
 import { isDemo } from "../config.js";
+import { animatedLogo } from "./logo.js";
 
 export function loginView() {
   overlay(false);
@@ -45,9 +46,8 @@ export function loginView() {
 
   return h("div", { class: "screen" },
     h("div", { class: "login" },
-      h("img", { class: "logo", src: "icons/icon-512.png", alt: "G-Systems" }),
-      h("h1", {}, "G-SYSTEMS"),
-      h("div", { class: "tag" }, "Sécurité électronique"),
+      animatedLogo(),
+      h("div", { class: "tag", style: "margin-top:6px" }, "Sécurité électronique"),
       isDemo() ? h("div", { class: "banner amber", style: "max-width:360px;text-align:center" },
         "Mode démo — backend non connecté. ⚙ « Configurer le serveur » ci-dessous.") : null,
       form
