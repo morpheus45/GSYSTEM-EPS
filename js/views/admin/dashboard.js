@@ -7,7 +7,7 @@ import { token } from "../../auth.js";
 import { fr, toIso } from "../../business/dates.js";
 import { eur } from "../../business/frais.js";
 import { getView, viewBanner } from "../../impersonate.js";
-import { computeRecap } from "../stats.js";
+import { computeRecap, detailNodes } from "../stats.js";
 import { RANGE_PRESETS, rangeFor, eachDay } from "../../business/dateRange.js";
 import { pieChart, barChart, lineChart, PALETTE } from "../charts.js";
 
@@ -42,12 +42,12 @@ export async function adminDashboardView() {
   if (view && view.role === "responsable") techs = techs.filter((t) => t.responsableId === view.id);
   const respById = {}; users.filter((u) => u.role === "responsable").forEach((r) => respById[r.id] = r.name);
 
-  // données brutes (une fois)
+  // données brutes (en PARALLÈLE pour la vitesse)
   const raw = {};
-  for (const t of techs) {
+  await Promise.all(techs.map(async (t) => {
     try { raw[t.id] = await api("getUserData", { userId: t.id }, token()); }
     catch { raw[t.id] = { temps: [], frais: [], gesteCo: [], compteur: [] }; }
-  }
+  }));
 
   let rangeKey = "thisMonth", cStart = "", cEnd = "";
   const content = h("div", {});
@@ -88,6 +88,13 @@ export async function adminDashboardView() {
     }));
     return Object.keys(byMonth).sort().map((k) => ({ label: k, value: byMonth[k] }));
   }
+
+  // store fusionné de tous les techs du périmètre (pour les stats agrégées)
+  const mergedStore = { temps: [], frais: [], gesteCo: [], compteur: [] };
+  techs.forEach((t) => {
+    const d = raw[t.id] || {};
+    ["temps", "frais", "gesteCo", "compteur"].forEach((k) => { (d[k] || []).forEach((e) => mergedStore[k].push(e)); });
+  });
 
   function render() {
     const range = rangeFor(rangeKey, cStart, cEnd);
@@ -132,6 +139,10 @@ export async function adminDashboardView() {
         : null,
       barChart(ranked.slice(0, 12).map(({ t, k }) => ({ label: t.name, value: Math.round(k.prime) })),
         "Classement techniciens (primes €)", " €"),
+
+      // détail résultats + qualité commerciale (agrégé sur le périmètre)
+      h("div", { class: "section-title" }, "Résultats & qualité commerciale"),
+      ...detailNodes(mergedStore, range.start, range.end),
 
       // tableau détaillé
       h("div", { class: "section-title" }, "Détail par technicien"),
