@@ -202,6 +202,11 @@ input::placeholder { color: var(--text-muted); }
 
 .muted-empty { text-align: center; color: var(--text-low); padding: 40px 20px; font-size: 14px; }
 
+/* ---------- Bannière d'aperçu (super admin « voir comme ») ---------- */
+.view-banner { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: linear-gradient(90deg, var(--resp-start), var(--resp-end)); color: #1a1a1a;
+  padding: 8px 14px; font-family: "GeistMono"; font-size: 12px; font-weight: 700; }
+
 /* ---------- Logo animé « gsystems » (repris de l'APK) ---------- */
 .gs-logo { width: 240px; max-width: 72%; height: auto; overflow: visible; display: block; margin: 0 auto; }
 .bl-g {

@@ -9,13 +9,16 @@ import { cyclePeriod, fr, inRange } from "../../business/dates.js";
 import { totalHours } from "../../business/hours.js";
 import { eur } from "../../business/frais.js";
 import { DEFAULT_PRIMES, totalPrime } from "../../business/gesteco.js";
+import { getView, viewBanner } from "../../impersonate.js";
 
 // Tableau de bord « au fil de l'eau » : agrège les données de tous les techs
 // (admin) ou de l'équipe (responsable) sur le cycle courant.
 export async function adminDashboardView() {
   const me = currentUser();
+  const view = getView();
   const { users } = await api("tree", {}, token());
-  const techs = users.filter((u) => u.role === "tech");
+  let techs = users.filter((u) => u.role === "tech");
+  if (view && view.role === "responsable") techs = techs.filter((t) => t.responsableId === view.id);
 
   const { start, end } = cyclePeriod(new Date(), CONFIG.DEFAULT_CYCLE_START_DAY);
 
@@ -37,6 +40,7 @@ export async function adminDashboardView() {
   const kpi = (v, k) => h("div", { class: "kpi" }, h("div", { class: "v" }, v), h("div", { class: "k" }, k));
 
   const body = [
+    viewBanner(() => navigate("/admin")),
     h("div", { class: "banner", style: "background:var(--obsidian-1);border:1px solid var(--hairline)" },
       `Cycle ${fr(start)} → ${fr(end)} · ${techs.length} techniciens`),
     h("div", { class: "kpi-grid" },

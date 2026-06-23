@@ -95,6 +95,7 @@ function demo(action, params, token) {
       if (me.role === "responsable") {
         users = users.filter((u) => u.id === me.id || u.responsableId === me.id);
       }
+      if (me.role !== "admin") users = users.filter((u) => u.role !== "admin"); // super admin invisible
       return { users };
     }
     case "createUser": {

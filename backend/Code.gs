@@ -166,6 +166,10 @@ function tree(me) {
   if (me.role === "responsable") {
     users = users.filter(function (u) { return u.id === me.id || u.responsableId === me.id; });
   }
+  // Le super admin est invisible pour tous les autres rôles.
+  if (me.role !== "admin") {
+    users = users.filter(function (u) { return u.role !== "admin"; });
+  }
   return { users: users };
 }
 
@@ -250,6 +254,11 @@ function getUserData(me, userId) {
   const target = userId || me.id;
   // garde-fous : tech → soi ; responsable → équipe ; admin → tout
   if (me.role === "tech" && target !== me.id) throw new Error("Accès refusé.");
+  // super admin invisible : un non-admin ne peut pas lire les données d'un admin
+  if (me.role !== "admin" && target !== me.id) {
+    const ta = findUserById(target);
+    if (ta && ta.role === "admin") throw new Error("Accès refusé.");
+  }
   if (me.role === "responsable") {
     const t = findUserById(target);
     if (!t || (t.id !== me.id && t.responsableId !== me.id)) throw new Error("Accès refusé.");

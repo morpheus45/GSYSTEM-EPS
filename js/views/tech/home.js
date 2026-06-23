@@ -1,8 +1,10 @@
-import { h, icon } from "../../ui.js";
+import { h, icon, toast } from "../../ui.js";
 import { CONFIG } from "../../config.js";
-import { currentUser, logout } from "../../auth.js";
+import { currentUser, logout, token } from "../../auth.js";
 import { navigate } from "../../router.js";
 import { loadMine } from "../../store.js";
+import { api } from "../../api.js";
+import { getView, viewBanner } from "../../impersonate.js";
 import { cyclePeriod, fr, inRange, currentQuarter } from "../../business/dates.js";
 import { eur } from "../../business/frais.js";
 
@@ -38,7 +40,11 @@ function hexA(hex, a) {
 
 export async function homeView() {
   const user = currentUser();
-  const store = await loadMine();
+  const view = getView();
+  const isPreview = !!(view && view.role === "tech");
+  const store = isPreview ? await api("getUserData", { userId: view.id }, token()) : await loadMine();
+  const displayName = isPreview ? view.name : (user.name || "TECH");
+  const nav = (p) => isPreview ? toast("Aperçu — lecture seule") : navigate(p);
 
   const { start, end } = cyclePeriod(new Date(), CONFIG.DEFAULT_CYCLE_START_DAY);
   const isCycle = (iso) => inRange(iso, start, end);
@@ -53,6 +59,9 @@ export async function homeView() {
 
   const screen = h("div", { class: "screen" });
 
+  const banner = viewBanner(() => navigate("/admin"));
+  if (banner) screen.append(banner);
+
   // STATUS BAR
   screen.append(
     h("div", { class: "statusbar" },
@@ -61,12 +70,13 @@ export async function homeView() {
         h("span", { class: "ref t-label-m" }, CONFIG.ORG),
         h("span", { class: "status t-label-m" }, "· OPÉRATIONNEL")),
       h("div", { style: "display:flex;gap:8px" },
-        user.role !== "tech"
+        (!isPreview && user.role !== "tech")
           ? h("button", { class: "icon-btn", title: "Retour gestion", onclick: () => navigate("/admin") },
               icon("group", 18))
           : null,
-        h("button", { class: "icon-btn", title: "Réglages", onclick: () => navigate("/settings") },
-          icon("settings", 18)))
+        isPreview ? null
+          : h("button", { class: "icon-btn", title: "Réglages", onclick: () => navigate("/settings") },
+              icon("settings", 18)))
     ),
     h("hr", { class: "hairline" })
   );
@@ -78,7 +88,7 @@ export async function homeView() {
       h("div", { class: "identity" },
         h("span", { class: "pip" }),
         h("span", { class: "who t-label-m" },
-          `${(user.name || "TECH").toUpperCase()}  ·  CYCLE ${fr(start)} → ${fr(end)}`))
+          `${displayName.toUpperCase()}  ·  CYCLE ${fr(start)} → ${fr(end)}`))
     )
   );
 
@@ -88,21 +98,21 @@ export async function homeView() {
     tile({ number: "01", label: "CLÔTURE", sub: "Clôture d'intervention", ic: "assignment",
       start: "#7C3AED", end: "#1A0B36", accent: "#A78BFA",
       liveValue: countTemps > 0 ? String(countTemps) : null, liveLabel: countTemps > 0 ? "ce cycle" : null,
-      onClick: () => navigate("/cloture") }),
+      onClick: () => nav("/cloture") }),
     tile({ number: "02", label: "ATTENTE CLIENT", sub: "Viber heure début · rappel /15 min", ic: "timer",
-      start: "#8A5CF6", end: "#6366F1", accent: "#DDD6FE", onClick: () => navigate("/attente") }),
+      start: "#8A5CF6", end: "#6366F1", accent: "#DDD6FE", onClick: () => nav("/attente") }),
     tile({ number: "03", label: "COURRIER", sub: "Viber « courrier ok »", ic: "email",
-      start: "#6366F1", end: "#3B82F6", accent: "#C7D2FE", onClick: () => navigate("/courrier") }),
+      start: "#6366F1", end: "#3B82F6", accent: "#C7D2FE", onClick: () => nav("/courrier") }),
     tile({ number: "04", label: "RÉCAP", sub: "Cumul du cycle · total euros", ic: "barchart",
-      start: "#3B82F6", end: "#06B6D4", accent: "#BFDBFE", onClick: () => navigate("/recap") }),
+      start: "#3B82F6", end: "#06B6D4", accent: "#BFDBFE", onClick: () => nav("/recap") }),
     tile({ number: "05", label: "FRAIS",
       sub: sumFrais > 0 ? `Tickets · ${eur(sumFrais)} ce cycle` : "Tickets · photos · envoi groupe",
       ic: "receipt", start: "#06B6D4", end: "#14B8A6", accent: "#A5F3FC",
       liveValue: countFrais > 0 ? String(countFrais) : null, liveLabel: countFrais > 0 ? "tickets" : null,
-      onClick: () => navigate("/frais") }),
+      onClick: () => nav("/frais") }),
     tile({ number: "06", label: "ENVOI MENSUEL", sub: "Excel + tickets + compteur", ic: "outbox",
       start: "#22C55E", end: "#15803D", accent: "#BBF7D0", pulse: endApproaching,
-      onClick: () => navigate("/envoi") })
+      onClick: () => nav("/envoi") })
   );
 
   const body = h("div", { class: "screen-body", style: "padding:0" }, tiles);
