@@ -5,7 +5,7 @@ import { api } from "../../api.js";
 import { token } from "../../auth.js";
 import { getView, setView, viewBanner } from "../../impersonate.js";
 
-const ROLE_LABEL = { admin: "Super admin", direction: "Direction", responsable: "Responsable", tech: "Technicien" };
+const ROLE_LABEL = { admin: "Super admin", direction: "Direction", responsable: "Responsable", tech: "Technicien", comptable: "Comptable" };
 
 export async function adminTreeView() {
   const me = currentUser();

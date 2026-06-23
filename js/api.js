@@ -160,6 +160,12 @@ function demo(action, params, token) {
       saveDb(db);
       return { ok: true };
     }
+    case "updateProfile": {
+      if (!me) throw new Error("Session expirée.");
+      const full = db.users.find((x) => x.id === me.id);
+      if (full) { if (params.plaque != null) full.plaque = params.plaque; if (params.codeTech != null) full.codeTech = params.codeTech; saveDb(db); }
+      return publicUser(full);
+    }
     case "changePassword": {
       if (!me) throw new Error("Session expirée.");
       const full = db.users.find((x) => x.id === me.id);

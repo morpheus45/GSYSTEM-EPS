@@ -65,11 +65,12 @@ function dispatch(action, params, token) {
   switch (action) {
     case "login":      return login(params.email, params.password);
     case "me":         return requireUser(me);
-    case "tree":       return tree(requireRole(me, ["admin", "direction", "responsable"]));
+    case "tree":       return tree(requireRole(me, ["admin", "direction", "responsable", "comptable"]));
     case "createUser": return createUser(requireRole(me, ["admin", "direction"]), params);
     case "updateUser": return updateUser(requireRole(me, ["admin", "direction"]), params);
     case "deleteUser": return deleteUser(requireRole(me, ["admin"]), params); // suppression = Super admin uniquement
     case "getUserData":return getUserData(requireUser(me), params.userId);
+    case "updateProfile": return updateProfile(requireUser(me), params); // tech : ses infos (plaque, code, email perso)
     case "pushEntries":return pushEntries(requireUser(me), params.kind, params.entries);
     case "deleteEntry":return deleteEntry(requireUser(me), params.kind, params.id);
     case "changePassword": return changePassword(requireUser(me), params);
@@ -186,7 +187,7 @@ function createUser(me, p) {
   appendRow("Users", [
     id, p.name, p.email, hashWithSalt(p.password, salt), p.role,
     p.responsableId || "", p.codeTech || "", driveId, driveUrl, new Date().toISOString(),
-    "active", salt, "true",
+    "active", salt, "true", p.plaque || "",
   ]);
   log("createUser", me.email, p.email + " (" + p.role + ")");
   return publicUser(findUserById(id));
@@ -213,6 +214,16 @@ function updateUser(me, p) {
   }
   setUserFields(p.id, fields);
   return publicUser(findUserById(p.id));
+}
+
+// Mise à jour par l'utilisateur de SES propres infos (tech/responsable) :
+// plaque (nom photo compteur), code tech, email perso. Pas de changement de rôle.
+function updateProfile(me, p) {
+  const fields = {};
+  if (p.plaque != null) fields.plaque = p.plaque;
+  if (p.codeTech != null) fields.codeTech = p.codeTech;
+  setUserFields(me.id, fields);
+  return publicUser(findUserById(me.id));
 }
 
 // Effacement RGPD (droit à l'effacement) : supprime le compte, ses données dans
@@ -355,9 +366,7 @@ function send(me, p) {
     if (p.channel === "mensuel") {
       const folderId = ensureUserFolder(me.id);
       const arch = archiveMensuel(me, folderId, p.payload || {});
-      attachments.push(arch.csvBlob);
-      if (arch.xlsmBlob) attachments.push(arch.xlsmBlob);
-      if (arch.pdfBlob) attachments.push(arch.pdfBlob);
+      (arch.files || []).forEach(function (b) { attachments.push(b); }); // Excel + récap PDF + frais + compteur
       bodyText += "\n" + arch.note;
     }
 
@@ -370,62 +379,79 @@ function send(me, p) {
 
 // Crée/retrouve "Archives mensuelles/<période>" dans le dossier du tech, y dépose
 // un export CSV des données du cycle (vérification) + une copie de son Excel modèle.
+// Reconstitue, dans Drive/<tech>/Archives mensuelles/<période>/, EXACTEMENT le
+// contenu envoyé à fdt par l'app d'origine : Excel feuille de temps, tickets de
+// frais (FRAIS-<CAT>[-n].ext), photo compteur (<PLAQUE>-MM-AAAA.jpg), récap PDF,
+// + une sauvegarde ZIP automatique du mois. Accessible à la comptable (rôle dédié).
 function archiveMensuel(me, folderId, payload) {
   const root = DriveApp.getFolderById(folderId);
   const archives = getOrCreateChild(root, "Archives mensuelles");
+  const startIso = frToIso(payload.start), endIso = frToIso(payload.end);
   const label = (payload.start || new Date().toISOString().slice(0, 10)).replace(/\//g, "-");
   const sub = getOrCreateChild(archives, label);
+  const u = findUserById(me.id);
+  const plaque = String(u.plaque || u.codeTech || "PLAQUE").toUpperCase();
+  const year = (startIso || "").slice(0, 4) || String(new Date().getFullYear());
+  const inP = function (d) { return (!startIso || d >= startIso) && (!endIso || d <= endIso); };
+  const files = [];                       // blobs joints au mail (= contenu fdt)
+  const blobFromFile = function (id) { try { return DriveApp.getFileById(id).getBlob(); } catch (e) { return null; } };
+  const blobFromData = function (dataUrl, mime) {
+    try { return Utilities.newBlob(Utilities.base64Decode(dataUrl.split(",")[1]), mime); } catch (e) { return null; }
+  };
 
-  // export CSV des interventions du tech (toutes ; le mail précise la période)
-  const temps = readData("Temps", me.id);
-  let csv = "date;type;client;ville;dept;num;observation\n";
-  temps.forEach(function (e) {
-    csv += [e.date, e.typeMission, e.nomClient, e.ville, e.departement, e.numeroIntervention, e.observationType]
-      .map(function (x) { return (x || "").toString().replace(/;/g, ","); }).join(";") + "\n";
-  });
-  const csvBlob = Utilities.newBlob(csv, "text/csv", "verification-" + label + ".csv");
-  sub.createFile(csvBlob);
-
-  // Remplissage du modèle Excel du tech (préserve les macros) → copie mensuelle.
-  // Repli : copie brute du modèle si le remplissage échoue.
-  const tpl = readAll("Files").filter(function (f) { return f.userId === me.id && f.kind === "excel_template"; })[0];
+  // 1. Excel feuille de temps rempli
   let xlsmBlob = null;
+  const tpl = readAll("Files").filter(function (f) { return f.userId === me.id && f.kind === "excel_template"; })[0];
   if (tpl) {
     try {
-      const fill = fillTemplateForUser(me.id, frToIso(payload.start), frToIso(payload.end));
-      if (fill.ok) {
-        xlsmBlob = fill.blob.setName("mensuel-" + label + ".xlsm");
-        sub.createFile(xlsmBlob);
-        log("fillExcel", me.email, "écrites=" + fill.report.written +
-          (fill.report.overflow.length ? " surplus=" + fill.report.overflow.join(",") : ""));
-      } else {
-        DriveApp.getFileById(tpl.fileId).makeCopy("mensuel-" + label + ".xlsm", sub);
-      }
-    } catch (e) {
-      log("fillExcel/err", me.email, String(e));
-      try { DriveApp.getFileById(tpl.fileId).makeCopy("mensuel-" + label + ".xlsm", sub); } catch (e2) {}
-    }
+      const fill = fillTemplateForUser(me.id, startIso, endIso);
+      xlsmBlob = (fill.ok ? fill.blob : blobFromFile(tpl.fileId));
+      if (xlsmBlob) xlsmBlob.setName("TEMPS_" + year + "_" + (startIso || label) + ".xlsm");
+    } catch (e) { log("fillExcel/err", me.email, String(e)); }
+    if (xlsmBlob) { sub.createFile(xlsmBlob); files.push(xlsmBlob); }
   }
 
-  // PDF de statistiques (fidèle au RÉCAP de l'APK)
+  // 2. Récap PDF (l'ancien HTML)
   let pdfBlob = null;
   try {
-    pdfBlob = monthlyStatsPdf(me, label, frToIso(payload.start), frToIso(payload.end));
-    sub.createFile(pdfBlob);
-  } catch (e) { log("statsPdf/err", me.email, String(e)); }
+    pdfBlob = monthlyStatsPdf(me, label, startIso, endIso).setName("Recap-mensuel_" + (startIso || label) + ".pdf");
+    sub.createFile(pdfBlob); files.push(pdfBlob);
+  } catch (e) { log("recapPdf/err", me.email, String(e)); }
 
-  // Photo(s) compteur de la période (si présentes en data URL)
+  // 3. Tickets de frais → FRAIS-<CATÉGORIE>[-n].<ext>
+  const catCount = {};
+  readData("Frais", me.id).filter(function (e) { return inP(e.date); }).forEach(function (e) {
+    const cat = String(e.categorie || "DIVERS").toUpperCase();
+    catCount[cat] = (catCount[cat] || 0) + 1;
+    const suffix = catCount[cat] > 1 ? "-" + catCount[cat] : "";
+    let blob = null, ext = "jpg";
+    if (e.fileId) { blob = blobFromFile(e.fileId); if (blob) ext = (blob.getName().split(".").pop() || "jpg"); }
+    else if (e.photo && /^data:/.test(e.photo)) { const m = e.photo.substring(5, e.photo.indexOf(";")); ext = (m.split("/")[1] || "jpg"); blob = blobFromData(e.photo, m); }
+    if (blob) { blob.setName("FRAIS-" + cat + suffix + "." + ext); sub.createFile(blob); files.push(blob); }
+  });
+
+  // 4. Photo compteur → <PLAQUE>-MM-AAAA.jpg
+  readData("Compteur", me.id).filter(function (e) { return inP(e.date); }).forEach(function (c) {
+    const mm = (c.date || "").slice(5, 7), yyyy = (c.date || "").slice(0, 4);
+    let blob = null;
+    if (c.fileId) blob = blobFromFile(c.fileId);
+    else if (c.photo && /^data:/.test(c.photo)) blob = blobFromData(c.photo, "image/jpeg");
+    if (blob) { blob.setName(plaque + "-" + mm + "-" + yyyy + ".jpg"); sub.createFile(blob); files.push(blob); }
+  });
+
+  // 5. Sauvegarde ZIP automatique du mois (données + fichiers)
+  let zipBlob = null;
   try {
-    const sIso = frToIso(payload.start), eIso = frToIso(payload.end);
-    readData("Compteur", me.id).forEach(function (c) {
-      if ((!sIso || c.date >= sIso) && (!eIso || c.date <= eIso) && c.photo && /^data:/.test(c.photo)) {
-        const b64 = c.photo.split(",")[1];
-        sub.createFile(Utilities.newBlob(Utilities.base64Decode(b64), "image/jpeg", (c.name || ("compteur-" + c.date)) + ".jpg"));
-      }
+    const data = {};
+    ["Temps", "Frais", "GesteCo", "Compteur"].forEach(function (n) {
+      data[n.toLowerCase()] = readData(n, me.id).filter(function (e) { return inP(e.date); });
     });
-  } catch (e) { log("compteurPhoto/err", me.email, String(e)); }
+    const entriesBlob = Utilities.newBlob(JSON.stringify(data, null, 1), "application/json", "entries.json");
+    zipBlob = Utilities.zip([entriesBlob].concat(files), "sauvegarde_" + label + ".zip");
+    sub.createFile(zipBlob);
+  } catch (e) { log("backupZip/err", me.email, String(e)); }
 
-  return { folderUrl: sub.getUrl(), csvBlob: csvBlob, xlsmBlob: xlsmBlob, pdfBlob: pdfBlob, note: "Archive : " + sub.getUrl() };
+  return { folderUrl: sub.getUrl(), xlsmBlob: xlsmBlob, pdfBlob: pdfBlob, zipBlob: zipBlob, files: files, note: "Archive : " + sub.getUrl() };
 }
 
 // Recap serveur (mêmes règles que js/views/stats.js).
@@ -575,6 +601,7 @@ function publicUser(u) {
     responsableId: u.responsableId || null, codeTech: u.codeTech || "",
     driveUrl: u.driveUrl || "", createdAt: u.createdAt,
     status: u.status || "active",
+    plaque: u.plaque || "",
     mustChangePassword: String(u.mustChangePassword) === "true",
   };
 }
@@ -586,7 +613,7 @@ function log(action, who, detail) {
 function setup() {
   const ss = db();
   const headers = {
-    Users: ["id", "name", "email", "passwordHash", "role", "responsableId", "codeTech", "driveFolderId", "driveUrl", "createdAt", "status", "salt", "mustChangePassword"],
+    Users: ["id", "name", "email", "passwordHash", "role", "responsableId", "codeTech", "driveFolderId", "driveUrl", "createdAt", "status", "salt", "mustChangePassword", "plaque"],
     Temps: ["userId", "id", "date", "json", "ts"],
     Frais: ["userId", "id", "date", "json", "ts"],
     GesteCo: ["userId", "id", "date", "json", "ts"],
@@ -610,7 +637,7 @@ function setup() {
     appendRow("Users", [
       "u_admin", CONFIG.BOOTSTRAP_ADMIN.name, CONFIG.BOOTSTRAP_ADMIN.email,
       hashWithSalt(CONFIG.BOOTSTRAP_ADMIN.password, salt), "admin", "", "", "", "", new Date().toISOString(),
-      "active", salt, "true",
+      "active", salt, "true", "",
     ]);
   }
   Logger.log("Setup OK. Base : " + ss.getUrl());

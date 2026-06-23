@@ -1,7 +1,8 @@
-import { h, toast } from "../../ui.js";
+import { h, toast, overlay } from "../../ui.js";
 import { screen, field } from "../shell.js";
-import { currentUser, logout } from "../../auth.js";
+import { currentUser, logout, token } from "../../auth.js";
 import { navigate } from "../../router.js";
+import { api } from "../../api.js";
 import { CONFIG } from "../../config.js";
 
 // Réglages perso du tech (champs propres au secteur). Persistés localement ;
@@ -19,12 +20,18 @@ export function settingsView() {
   const respSecteur = inp("respSecteur", { type: "email", placeholder: "responsable@secteur.fr" });
   const codeTech = inp("codeTech", { placeholder: user.codeTech || "ISTGSxx" });
 
-  const save = () => {
+  const save = async () => {
     Object.assign(prof, {
       nom: nom.value, plaque: plaque.value, emailPerso: emailPerso.value,
       respSecteur: respSecteur.value, codeTech: codeTech.value,
     });
     localStorage.setItem(LS, JSON.stringify(prof));
+    // plaque + code tech aussi côté serveur (nommage compteur, sujets EPS)
+    try {
+      overlay(true);
+      await api("updateProfile", { plaque: plaque.value, codeTech: codeTech.value }, token());
+      overlay(false);
+    } catch (e) { overlay(false); }
     toast("Réglages enregistrés");
   };
 

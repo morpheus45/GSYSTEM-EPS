@@ -25,7 +25,7 @@ const ROUTES = [
   { re: /^\/login$/, roles: "*", view: () => loginView() },
   { re: /^\/privacy$/, roles: "*", view: () => privacyView() },
   { re: /^\/setup-backend$/, roles: "*", view: () => setupBackendView() },
-  { re: /^\/change-password$/, roles: ["tech", "responsable", "admin", "direction"], view: () => changePasswordView() },
+  { re: /^\/change-password$/, roles: ["tech", "responsable", "admin", "direction", "comptable"], view: () => changePasswordView() },
 
   // TECH
   { re: /^\/home$/, roles: ["tech", "admin", "direction", "responsable"], view: () => homeView() },
@@ -38,10 +38,10 @@ const ROUTES = [
   { re: /^\/settings$/, roles: ["tech", "admin", "direction", "responsable"], view: () => settingsView() },
 
   // ADMIN / RESPONSABLE (arbre + détail)
-  { re: /^\/admin$/, roles: ["admin", "direction", "responsable"], view: () => adminTreeView() },
-  { re: /^\/admin\/dashboard$/, roles: ["admin", "direction", "responsable"], view: () => adminDashboardView() },
+  { re: /^\/admin$/, roles: ["admin", "direction", "responsable", "comptable"], view: () => adminTreeView() },
+  { re: /^\/admin\/dashboard$/, roles: ["admin", "direction", "responsable", "comptable"], view: () => adminDashboardView() },
   { re: /^\/admin\/new$/, roles: ["admin", "direction"], view: () => userFormView(null) },
-  { re: /^\/admin\/user\/([^/]+)$/, roles: ["admin", "direction", "responsable"], view: (m) => userDetailView(m[1]) },
+  { re: /^\/admin\/user\/([^/]+)$/, roles: ["admin", "direction", "responsable", "comptable"], view: (m) => userDetailView(m[1]) },
   { re: /^\/admin\/edit\/([^/]+)$/, roles: ["admin", "direction"], view: (m) => userFormView(m[1]) },
 ];
 

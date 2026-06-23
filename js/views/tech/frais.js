@@ -64,7 +64,7 @@ export async function fraisView() {
         const base64 = await fileToBase64(photoFile);
         const r = await api("uploadFile", { kind: "frais_" + t.id, filename: photoFile.name,
           base64, mimeType: photoFile.type, size: photoFile.size }, token());
-        t.photoUrl = r.url; t.photoName = r.filename;
+        t.photoUrl = r.url; t.photoName = r.filename; t.fileId = r.fileId;
         overlay(false);
       }
       await upsert("frais", t);

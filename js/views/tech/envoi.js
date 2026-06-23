@@ -61,16 +61,21 @@ export async function envoiView() {
   const photoInput = h("input", { type: "file", accept: "image/*", capture: "environment", style: "display:none" });
   photoInput.addEventListener("change", async (e) => {
     const file = e.target.files[0]; if (!file) return;
-    const dataUrl = await fileToDataUrl(file);
-    const c = { id: newId(), date: todayIso(), photo: dataUrl, name: file.name };
-    await upsert("compteur", c);
-    hasPhoto = true;
-    preview.style.display = "";
-    preview.innerHTML = "";
-    preview.append(h("h3", {}, "Photo compteur"),
-      h("img", { src: dataUrl, style: "width:100%;border-radius:10px" }));
-    refresh();
-    toast("Photo compteur enregistrée");
+    try {
+      overlay(true);
+      const dataUrl = await fileToDataUrl(file);
+      const id = newId();
+      const r = await api("uploadFile", { kind: "compteur_" + id, filename: file.name,
+        base64: dataUrl.split(",")[1], mimeType: file.type, size: file.size }, token());
+      await upsert("compteur", { id, date: todayIso(), fileId: r.fileId, url: r.url, name: r.filename });
+      hasPhoto = true;
+      overlay(false);
+      preview.style.display = ""; preview.innerHTML = "";
+      preview.append(h("h3", {}, "Photo compteur"),
+        h("img", { src: dataUrl, style: "width:100%;border-radius:10px" }));
+      refresh();
+      toast("Photo compteur enregistrée (Drive)");
+    } catch (err) { overlay(false); toast("Photo : " + err.message); }
   });
 
   const send = async () => {

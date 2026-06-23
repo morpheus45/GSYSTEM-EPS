@@ -23,6 +23,7 @@ export async function userFormView(userId) {
     h("option", { value: "tech", selected: !u || u.role === "tech" }, "Technicien"),
     h("option", { value: "responsable", selected: u?.role === "responsable" }, "Responsable"),
     h("option", { value: "direction", selected: u?.role === "direction" }, "Direction"),
+    h("option", { value: "comptable", selected: u?.role === "comptable" }, "Comptable (lecture seule)"),
   ];
   if (iAmSuper) roleOpts.push(h("option", { value: "admin", selected: u?.role === "admin" }, "Super admin"));
   const role = h("select", {}, ...roleOpts);

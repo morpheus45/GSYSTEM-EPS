@@ -172,6 +172,7 @@ input::placeholder { color: var(--text-muted); }
   border: 1px solid var(--hairline); color: var(--text-mid); }
 .badge.role-admin { color: var(--admin-accent); border-color: var(--admin-accent); }
 .badge.role-direction { color: var(--recap-accent); border-color: var(--recap-accent); }
+.badge.role-comptable { color: var(--frais-accent); border-color: var(--frais-accent); }
 .badge.role-responsable { color: var(--resp-accent); border-color: var(--resp-accent); }
 .badge.role-tech { color: var(--temps-accent); border-color: var(--temps-accent); }
 
