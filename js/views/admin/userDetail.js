@@ -39,12 +39,17 @@ export async function userDetailView(userId) {
         h("span", { class: "badge role-" + u.role, style: "margin-top:6px;display:inline-block" }, u.role))),
   ];
 
-  // dossier Drive
+  // dossier Drive — accès direct au dossier du tech (mois/année, Excel, frais, photos…)
   if (u.driveUrl && u.driveUrl !== "#") {
-    body.push(h("a", { class: "btn ghost", href: u.driveUrl, target: "_blank", style: "text-decoration:none" },
-      icon("folder", 18), "Ouvrir le dossier Drive"));
-  } else if (isTech) {
-    body.push(h("div", { class: "banner amber" }, "Dossier Drive : créé côté serveur à l'activation du backend."));
+    body.push(
+      h("a", { class: "btn", href: u.driveUrl, target: "_blank",
+        style: "text-decoration:none;background:var(--admin-start)" },
+        icon("folder", 18), "Ouvrir le dossier Drive"),
+      h("p", { class: "text-low", style: "font-size:11px;margin:4px 0 0;text-align:center" },
+        "Contient : dossiers mois/année · Excel du mois · frais · photos (ce qui part à fdt)."));
+  } else if (isTech || u.role === "responsable") {
+    body.push(h("div", { class: "banner amber" },
+      "Dossier Drive : sera créé à l'activation du backend (re-paste) ou à la prochaine création."));
   }
 
   if (isTech) {

@@ -87,6 +87,13 @@ export async function adminTreeView() {
       } }, "👁");
   }
 
+  // bouton d'accès direct au dossier Drive du tech/responsable (Excel, frais, mois…)
+  function driveBtn(u) {
+    return h("a", { class: "icon-btn", href: u.driveUrl, target: "_blank",
+      style: "width:30px;height:30px;text-decoration:none", title: "Dossier Drive de " + u.name,
+      onclick: (e) => e.stopPropagation() }, "📁");
+  }
+
   function section(title, nodes) {
     return h("div", {}, h("div", { class: "section-title" }, title), ...nodes);
   }
@@ -98,6 +105,7 @@ export async function adminTreeView() {
       inactive ? h("span", { class: "badge", style: "color:var(--text-low)" }, "Inactif")
                : h("span", { class: "badge role-" + u.role }, ROLE_LABEL[u.role]),
     ];
+    if (u.driveUrl && u.driveUrl !== "#") kids.push(driveBtn(u));
     if (isSuper && u.role === "tech" && !inactive) kids.push(previewBtn(u, "tech"));
     kids.push(h("span", { class: "chev" }, icon("chevron", 18)));
     return h("div", { class: "node", style: inactive ? "opacity:.55" : "" },
@@ -113,6 +121,7 @@ export async function adminTreeView() {
         h("div", { class: "sub" }, `${children.length} tech${children.length > 1 ? "s" : ""}`)),
       h("span", { class: "badge role-responsable" }, "Responsable"),
     ];
+    if (r.driveUrl && r.driveUrl !== "#") headKids.push(driveBtn(r));
     if (isSuper) headKids.push(previewBtn(r, "responsable"));
     headKids.push(h("span", { class: "chev" }, icon("chevron", 18)));
     const head = h("div", { class: "node-head" }, ...headKids);
