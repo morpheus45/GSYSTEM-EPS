@@ -89,11 +89,23 @@ function hashWithSalt(pw, salt) {
   const raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, pw + "|" + salt + "|" + CONFIG.SALT);
   return raw.map(function (b) { return ("0" + (b & 0xff).toString(16)).slice(-2); }).join("");
 }
+// Ancien schéma (sel global) — pour les comptes créés avant le sel par utilisateur.
+function legacyHash(pw) {
+  const raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, pw + CONFIG.SALT);
+  return raw.map(function (b) { return ("0" + (b & 0xff).toString(16)).slice(-2); }).join("");
+}
 function newSalt() { return Utilities.getUuid().replace(/-/g, ""); }
+
+// Vérifie un mot de passe en gérant les 2 schémas (rétrocompatible) :
+// - compte récent (avec sel) → hashWithSalt ; - compte ancien (sans sel) → legacyHash.
+function verifyPassword(user, pw) {
+  if (user.salt) return user.passwordHash === hashWithSalt(pw, user.salt);
+  return user.passwordHash === legacyHash(pw);
+}
 
 function login(email, password) {
   const u = findUserByEmail(email);
-  if (!u || u.passwordHash !== hashWithSalt(password, u.salt || "")) throw new Error("Email ou mot de passe incorrect.");
+  if (!u || !verifyPassword(u, password)) throw new Error("Email ou mot de passe incorrect.");
   if (u.status === "inactive") throw new Error("Accès désactivé. Contactez votre administrateur.");
   const token = Utilities.getUuid();
   appendRow("Sessions", [token, u.id, new Date().toISOString()]);
@@ -120,7 +132,7 @@ function sessionUser(token) {
 // applique la politique de robustesse, régénère le sel, lève le flag.
 function changePassword(me, p) {
   const u = findUserById(me.id);
-  if (!u || u.passwordHash !== hashWithSalt(p.currentPassword || "", u.salt || ""))
+  if (!u || !verifyPassword(u, p.currentPassword || ""))
     throw new Error("Mot de passe actuel incorrect.");
   const errs = passwordPolicyErrors(p.newPassword, u.email);
   if (errs.length) throw new Error("Mot de passe trop faible : il faut " + errs.join(", ") + ".");
