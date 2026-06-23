@@ -357,6 +357,7 @@ function send(me, p) {
       const arch = archiveMensuel(me, folderId, p.payload || {});
       attachments.push(arch.csvBlob);
       if (arch.xlsmBlob) attachments.push(arch.xlsmBlob);
+      if (arch.pdfBlob) attachments.push(arch.pdfBlob);
       bodyText += "\n" + arch.note;
     }
 
@@ -406,8 +407,70 @@ function archiveMensuel(me, folderId, payload) {
     }
   }
 
-  return { folderUrl: sub.getUrl(), csvBlob: csvBlob, xlsmBlob: xlsmBlob, note: "Archive : " + sub.getUrl() };
+  // PDF de statistiques (fidèle au RÉCAP de l'APK)
+  let pdfBlob = null;
+  try {
+    pdfBlob = monthlyStatsPdf(me, label, frToIso(payload.start), frToIso(payload.end));
+    sub.createFile(pdfBlob);
+  } catch (e) { log("statsPdf/err", me.email, String(e)); }
+
+  // Photo(s) compteur de la période (si présentes en data URL)
+  try {
+    const sIso = frToIso(payload.start), eIso = frToIso(payload.end);
+    readData("Compteur", me.id).forEach(function (c) {
+      if ((!sIso || c.date >= sIso) && (!eIso || c.date <= eIso) && c.photo && /^data:/.test(c.photo)) {
+        const b64 = c.photo.split(",")[1];
+        sub.createFile(Utilities.newBlob(Utilities.base64Decode(b64), "image/jpeg", (c.name || ("compteur-" + c.date)) + ".jpg"));
+      }
+    });
+  } catch (e) { log("compteurPhoto/err", me.email, String(e)); }
+
+  return { folderUrl: sub.getUrl(), csvBlob: csvBlob, xlsmBlob: xlsmBlob, pdfBlob: pdfBlob, note: "Archive : " + sub.getUrl() };
 }
+
+// Recap serveur (mêmes règles que js/views/stats.js).
+function monthlyRecap(userId, startIso, endIso) {
+  function inP(iso) { return (!startIso || iso >= startIso) && (!endIso || iso <= endIso); }
+  const temps = readData("Temps", userId).filter(function (e) { return inP(e.date); });
+  const frais = readData("Frais", userId).filter(function (e) { return inP(e.date); });
+  const geste = readData("GesteCo", userId).filter(function (e) { return inP(e.date); });
+  const byDay = {}; temps.forEach(function (e) { (byDay[e.date] = byDay[e.date] || []).push(e); });
+  let hours = 0; for (const d in byDay) hours += xlComputeHours(byDay[d]);
+  const PRIME = { GSM: 3, CO: 2, DMP: 2, SE: 4, TC: 1.5, SI: 3, CAM: 4, DACCO: 3, BA: 1, CL: 3, DF: 1.5, "SONDE IN": 1.5 };
+  const byType = {}; Object.keys(PRIME).forEach(function (k) { byType[k] = 0; });
+  let prime = 0;
+  geste.forEach(function (g) {
+    const inst = g.installed || {};
+    Object.keys(PRIME).forEach(function (k) { const n = inst[k] || 0; byType[k] += n; prime += n * PRIME[k]; });
+  });
+  const ttc = frais.reduce(function (s, e) { return s + (e.montantEur || 0); }, 0);
+  return { nTemps: temps.length, hours: hours, prime: prime, ttc: ttc, byType: byType };
+}
+
+function monthlyStatsPdf(me, label, startIso, endIso) {
+  const r = monthlyRecap(me.id, startIso, endIso);
+  const code = (findUserById(me.id).codeTech) || "";
+  const rows = Object.keys(r.byType).filter(function (k) { return r.byType[k] > 0; })
+    .map(function (k) { return "<tr><td>" + k + "</td><td style='text-align:right'>" + r.byType[k] + "</td></tr>"; }).join("");
+  const html = "<html><head><meta charset='utf-8'><style>"
+    + "body{font-family:Arial,sans-serif;color:#1a1a1a;padding:24px}"
+    + "h1{color:#ee2322;margin:0 0 4px} table{border-collapse:collapse;width:100%;margin:8px 0}"
+    + "td,th{border:1px solid #ccc;padding:7px;font-size:13px} th{background:#f3f3f3;text-align:left}"
+    + "</style></head><body>"
+    + "<h1>G-SYSTEMS · RÉCAP</h1>"
+    + "<p><b>" + me.name + "</b> &nbsp;·&nbsp; code " + code + "<br>Période : " + label + "</p>"
+    + "<table><tr><th>Indicateur</th><th style='text-align:right'>Valeur</th></tr>"
+    + "<tr><td>Interventions</td><td style='text-align:right'>" + r.nTemps + "</td></tr>"
+    + "<tr><td>Heures</td><td style='text-align:right'>" + r.hours + " h</td></tr>"
+    + "<tr><td>Primes GESTE CO</td><td style='text-align:right'>" + r.prime.toFixed(2) + " €</td></tr>"
+    + "<tr><td>Frais TTC</td><td style='text-align:right'>" + r.ttc.toFixed(2) + " €</td></tr></table>"
+    + "<h3>GESTE CO installés</h3><table><tr><th>Type</th><th style='text-align:right'>Qté</th></tr>"
+    + (rows || "<tr><td colspan='2'>Aucune extension</td></tr>") + "</table>"
+    + "<p style='color:#888;font-size:11px'>Généré automatiquement par G-SYSTEMS.</p></body></html>";
+  return Utilities.newBlob(html, "text/html", "stats-" + label + ".html")
+    .getAs("application/pdf").setName("stats-" + label + ".pdf");
+}
+
 function getOrCreateChild(parent, name) {
   const it = parent.getFoldersByName(name);
   return it.hasNext() ? it.next() : parent.createFolder(name);

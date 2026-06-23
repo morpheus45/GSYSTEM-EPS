@@ -9,6 +9,7 @@ import { cyclePeriod, fr, inRange } from "../../business/dates.js";
 import { totalHours } from "../../business/hours.js";
 import { eur } from "../../business/frais.js";
 import { DEFAULT_PRIMES, totalPrime } from "../../business/gesteco.js";
+import { recapPanel } from "../stats.js";
 
 export async function userDetailView(userId) {
   const me = currentUser();
@@ -48,21 +49,10 @@ export async function userDetailView(userId) {
 
   if (isTech) {
     body.push(
-      h("div", { class: "banner", style: "background:var(--obsidian-1);border:1px solid var(--hairline)" },
-        `Cycle ${fr(start)} → ${fr(end)}`),
-      h("div", { class: "kpi-grid" },
-        kpi(String(temps.length), "Interventions"),
-        kpi(hours + " h", "Heures"),
-        kpi(eur(prime), "Primes"),
-        kpi(eur(sumFrais), "Frais")),
-      h("div", { class: "card" },
-        h("h3", {}, "Dernières interventions"),
-        temps.length ? temps.slice(-8).reverse().map((t) =>
-          stat(`${t.typeMission} · ${t.nomClient || "—"} ${t.ville || ""}`, t.numeroIntervention || ""))
-          : h("div", { class: "muted-empty" }, "Aucune intervention ce cycle")),
-      h("div", { class: "card" },
-        h("h3", {}, "Code tech"),
-        stat("Code", u.codeTech || "—"))
+      h("p", { class: "text-low", style: "font-size:12px;margin:0 0 4px" },
+        "Stats fidèles au RÉCAP · ‹ › pour les mois précédents."),
+      recapPanel(store),
+      h("div", { class: "card" }, h("h3", {}, "Code tech"), stat("Code", u.codeTech || "—"))
     );
   }
 

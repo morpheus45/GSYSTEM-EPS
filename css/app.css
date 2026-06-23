@@ -203,6 +203,12 @@ input::placeholder { color: var(--text-muted); }
 .muted-empty { text-align: center; color: var(--text-low); padding: 40px 20px; font-size: 14px; }
 
 /* ---------- Bannière d'aperçu (super admin « voir comme ») ---------- */
+.period-nav { display: flex; align-items: center; gap: 10px; margin: 6px 0 12px;
+  background: var(--obsidian-1); border: 1px solid var(--hairline); border-radius: var(--r-md); padding: 6px 8px; }
+.period-nav .icon-btn { width: 36px; height: 36px; font-size: 22px; line-height: 1; }
+.period-nav .t-label { color: var(--text-hi); }
+
+/* ---------- Bannière d'aperçu (super admin « voir comme ») ---------- */
 .view-banner { display: flex; align-items: center; justify-content: space-between; gap: 10px;
   background: linear-gradient(90deg, var(--resp-start), var(--resp-end)); color: #1a1a1a;
   padding: 8px 14px; font-family: "GeistMono"; font-size: 12px; font-weight: 700; }
