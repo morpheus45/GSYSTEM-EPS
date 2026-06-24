@@ -609,6 +609,23 @@ function log(action, who, detail) {
   appendRow("Log", [new Date().toISOString(), action, who, detail]);
 }
 
+/* ====================== RÉPARATION ADMIN (dépannage) ======================
+ * À exécuter dans l'éditeur (▶) si l'admin ne peut plus se connecter.
+ * Réinitialise son mot de passe à CONFIG.BOOTSTRAP_ADMIN.password avec le code
+ * et le SALT ACTUELS → la connexion remarche après redéploiement. Aucune donnée perdue.
+ */
+function repairAdmin() {
+  const u = findUserByEmail(CONFIG.BOOTSTRAP_ADMIN.email);
+  if (!u) { Logger.log("Admin introuvable : " + CONFIG.BOOTSTRAP_ADMIN.email); return; }
+  const salt = newSalt();
+  setUserFields(u.id, {
+    salt: salt,
+    passwordHash: hashWithSalt(CONFIG.BOOTSTRAP_ADMIN.password, salt),
+    mustChangePassword: "true", status: "active",
+  });
+  Logger.log("Admin réparé : " + u.email + " / mot de passe = " + CONFIG.BOOTSTRAP_ADMIN.password);
+}
+
 /* ====================== SETUP (à exécuter UNE fois) ====================== */
 function setup() {
   const ss = db();
