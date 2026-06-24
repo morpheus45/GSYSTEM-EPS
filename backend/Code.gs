@@ -77,6 +77,17 @@ function dispatch(action, params, token) {
     case "uploadFile": return uploadFile(requireUser(me), params);
     case "listFiles":  return listFiles(requireUser(me), params.userId);
     case "send":       return send(requireUser(me), params);
+    case "_diag": {  // sonde de dépannage (sans secret, à retirer ensuite)
+      const a = findUserByEmail(CONFIG.BOOTSTRAP_ADMIN.email);
+      return {
+        saltPrefix: String(CONFIG.SALT).slice(0, 4), saltLen: String(CONFIG.SALT).length,
+        usersCount: readAll("Users").length,
+        adminEmail: CONFIG.BOOTSTRAP_ADMIN.email, adminFound: !!a,
+        adminHasSalt: a ? !!a.salt : null,
+        verifyBootstrap: a ? verifyPassword(a, CONFIG.BOOTSTRAP_ADMIN.password) : null,
+        emails: readAll("Users").map(function (u) { return u.email + ":" + u.role; }),
+      };
+    }
     default: throw new Error("Action inconnue: " + action);
   }
 }
