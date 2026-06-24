@@ -626,6 +626,24 @@ function repairAdmin() {
   Logger.log("Admin réparé : " + u.email + " / mot de passe = " + CONFIG.BOOTSTRAP_ADMIN.password);
 }
 
+/* ====================== DIAGNOSTIC (dépannage connexion) ======================
+ * À exécuter dans l'éditeur (▶) puis copier le Journal d'exécution. Aide à voir
+ * pourquoi la connexion échoue (SALT, hash, correspondance). Ne révèle pas de mot de passe.
+ */
+function diag() {
+  const u = findUserByEmail(CONFIG.BOOTSTRAP_ADMIN.email);
+  Logger.log("CONFIG.SALT (4 premiers) = " + String(CONFIG.SALT).slice(0, 4) + "… (longueur " + String(CONFIG.SALT).length + ")");
+  Logger.log("Admin recherché = " + CONFIG.BOOTSTRAP_ADMIN.email);
+  Logger.log("Admin trouvé = " + (u ? "OUI (" + u.email + ", statut " + (u.status || "") + ")" : "NON"));
+  if (u) {
+    Logger.log("admin a un sel par compte = " + (u.salt ? "OUI" : "non (legacy)"));
+    Logger.log("verifyPassword('" + CONFIG.BOOTSTRAP_ADMIN.password + "') = " + verifyPassword(u, CONFIG.BOOTSTRAP_ADMIN.password));
+  }
+  const all = readAll("Users");
+  Logger.log("Nombre de comptes en base = " + all.length);
+  all.forEach(function (x) { Logger.log(" - " + x.email + " (" + x.role + ")"); });
+}
+
 /* ====================== SETUP (à exécuter UNE fois) ====================== */
 function setup() {
   const ss = db();
