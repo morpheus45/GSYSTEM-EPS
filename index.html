@@ -2,30 +2,33 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>G-Systems</title>
-  <meta name="description" content="App technicien G-Systems — sécurité électronique." />
-
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.webmanifest" />
-  <meta name="theme-color" content="#07080D" />
   <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png" />
-
-  <!-- iOS / Apple : installation sur l'écran d'accueil -->
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="G-Systems" />
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
-
-  <link rel="stylesheet" href="css/theme.css" />
-  <link rel="stylesheet" href="css/app.css" />
+  <style>
+    body { margin:0; font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif; background:#07080D;
+      color:#F7F7F2; min-height:100vh; display:flex; flex-direction:column; align-items:center;
+      justify-content:center; text-align:center; padding:24px; }
+    h1 { font-size:44px; letter-spacing:-1px; margin:16px 0 4px; }
+    h1 .g { color:#ee2322; }
+    .sub { color:#7A8094; font-size:14px; letter-spacing:1px; text-transform:uppercase; }
+    img { width:96px; height:96px; border-radius:24px; }
+    .links { margin-top:28px; display:flex; flex-direction:column; gap:12px; }
+    a.btn { color:#F7F7F2; text-decoration:none; border:1px solid #2F3340; border-radius:12px;
+      padding:13px 20px; font-size:15px; }
+    a.btn.red { background:#ee2322; border-color:#ee2322; }
+    .foot { color:#4A4F60; font-size:12px; margin-top:32px; }
+  </style>
 </head>
 <body>
-  <div id="app">
-    <div class="overlay"><div class="spinner"></div></div>
+  <img src="icons/icon-512.png" alt="G-Systems" />
+  <h1><span class="g">G</span>-SYSTEMS</h1>
+  <div class="sub">Sécurité électronique · App technicien</div>
+  <div class="links">
+    <a class="btn red" href="https://github.com/morpheus45/gsystem/releases/latest/download/app-debug.apk">Télécharger l'APK (Android)</a>
+    <a class="btn" href="https://morpheus45.github.io/gsystem/">Guide technicien</a>
+    <a class="btn" href="privacy-policy.html">Politique de confidentialité</a>
   </div>
-  <div id="toast"></div>
-
-  <script type="module" src="js/app.js"></script>
+  <div class="foot">© 2026 G-Systems FR</div>
 </body>
 </html>
