@@ -1,16 +1,16 @@
 # Fiche Play Store — textes (Français)
 
-## Nom de l'application (max 30 caractères)
+## Nom de l'application (max 30 caractères — ici 9, vérifié)
 ```
 G-Systems
 ```
 
-## Description courte (max 80 caractères)
+## Description courte (max 80 caractères — ici 79, vérifié)
 ```
-Outil technicien : clôtures, frais, geste co, récap et envoi mensuel. 100% local.
+Outil technicien : clôtures, frais, geste co, récap, envoi mensuel. 100% local.
 ```
 
-## Description complète (max 4000 caractères)
+## Description complète (max 4000 caractères — ici 1165, vérifié)
 ```
 G-Systems est l'application des techniciens en sécurité électronique. Elle remplace
 Excel, e-mails et notes par un seul écran d'accueil clair, avec 6 actions.

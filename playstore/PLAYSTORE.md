@@ -13,15 +13,25 @@
 ## 0. Pré-requis / points de vigilance
 
 - **Compte Google Play Console** : 25 $ une seule fois, + **vérification d'identité**
-  (pièce d'identité, adresse). Compte perso ou société. Comptes créés en 2024+ :
-  Google peut demander un **test fermé de 14 jours avec ≥ 12 testeurs** avant la prod
-  (pour les comptes « développeur particulier »). À anticiper.
+  (pièce d'identité, adresse). Compte perso ou société.
+- **Test fermé obligatoire (comptes particuliers)** : tout compte **« développeur particulier »
+  créé après le 13 novembre 2023** doit réussir un **test fermé** avec **au moins 12 testeurs
+  inscrits en continu pendant 14 jours** avant de pouvoir demander l'accès à la production.
+  12 comptes Google **distincts**, inscrits via ton lien d'opt-in, l'app installée sur un **vrai
+  téléphone** (émulateurs et doublons ne comptent pas). Le compte à rebours de 14 jours ne
+  démarre qu'une fois la version approuvée **et** les 12 testeurs inscrits. **À anticiper : c'est
+  le poste le plus long du projet.** Un compte de société (« organisation ») n'y est pas soumis.
 - **Format de publication : AAB** (Android App Bundle), plus l'APK. Il faut donc **générer
   un `.aab`** (voir §2). Cela ne change pas l'app — c'est juste un autre format de paquet.
-- **targetSdk** : Play exige une cible récente (au 2ᵉ semestre 2025, **API 35 / Android 15**).
-  Ton app cible actuellement l'API 34. Si Play refuse, il faudra **bumper `targetSdk` à 35**
-  dans `app/build.gradle.kts` (une ligne, aucune fonctionnalité changée) puis rebuild. C'est
-  le **seul** changement potentiellement nécessaire côté source.
+- **targetSdk : API 36 OBLIGATOIRE.** Depuis le **31 août 2026**, toute nouvelle app et toute
+  mise à jour doit cibler **Android 16 (API 36)** ou plus ; en dessous, Play **rejette** l'envoi.
+  D'après ce guide, l'app cible l'**API 34** → il faut donc **passer `targetSdk` (et
+  `compileSdk`) à 36** dans `app/build.gradle.kts`, puis rebuild. C'est le **seul** changement
+  nécessaire côté source, et il est **bloquant** : sans lui, rien ne peut être publié.
+  (Vérifie la valeur réelle dans le dépôt `morpheus45/gsystem` avant de modifier.)
+  Passer de 34 à 36 peut demander de vérifier deux comportements Android : l'affichage
+  **bord-à-bord** imposé (API 35+) et les **nouvelles règles sur les services en premier plan**.
+  À contrôler visuellement sur un téléphone après le rebuild.
 - **Signature** : utilise la **signature d'application Play** (Play App Signing). Tu fournis
   une **clé d'upload** ; Google gère la clé finale. Ne perds pas la clé d'upload.
 
@@ -66,8 +76,12 @@ Copie les textes depuis [`listing-fr.md`](listing-fr.md). Ajoute :
 
 - **Icône de l'application** : [`assets/icon-512.png`](assets/icon-512.png) (512×512, PNG).
 - **Image mise en avant (feature graphic)** : [`assets/feature-graphic-1024x500.png`](assets/feature-graphic-1024x500.png).
-- **Captures d'écran téléphone** : **2 à 8**, format portrait, entre 320 et 3840 px.
+- **Captures d'écran téléphone** : **2 minimum** (4 recommandé pour être éligible aux mises en
+  avant), **8 maximum**. PNG 24 bits ou JPEG, chaque côté entre **320 et 3840 px**, ratio max
+  **2:1** — le plus simple : des captures portrait **1080 × 1920**.
   👉 À faire par toi depuis l'app installée (accueil 6 tuiles, CLÔTURE, FRAIS, RÉCAP, ENVOI MENSUEL).
+  Une capture d'écran brute du téléphone (bouton Volume bas + Marche) convient : pas besoin de
+  retouche. **N'invente pas de visuels** : Google exige des captures réelles de l'app.
 - **Catégorie** : Professionnel (Business) · **Tags** : productivité, entreprise.
 - **Coordonnées** : e-mail `cedric.lago@gmail.com`.
 - **Politique de confidentialité (URL)** :
@@ -102,6 +116,9 @@ Copie les textes depuis [`listing-fr.md`](listing-fr.md). Ajoute :
 
 ## 6. Après publication
 
+- **Lien Play sur le site** : dans `index.html` (racine de ce dépôt), décommente la ligne
+  prévue et colle l'adresse de ta fiche Play à la place de `VOTRE.ID` ; le bandeau
+  « Bientôt sur Google Play » est alors remplacé par un vrai bouton d'installation.
 - **Mises à jour** : réuploader un AAB avec un `versionCode` supérieur.
 - **Signature** : conserve précieusement la clé d'upload (sinon impossible de mettre à jour).
 - **Conformité** : garde l'URL de politique de confidentialité valide et l'app à jour côté targetSdk.
@@ -109,11 +126,22 @@ Copie les textes depuis [`listing-fr.md`](listing-fr.md). Ajoute :
 ---
 
 ### Récapitulatif « prêt à cocher »
-- [ ] Compte Play créé + identité vérifiée
-- [ ] AAB signé généré (`app-release.aab`)
-- [ ] Icône 512 + feature graphic 1024×500 ajoutés
-- [ ] 2+ captures d'écran ajoutées
-- [ ] Textes de fiche (FR) remplis
-- [ ] URL politique de confidentialité renseignée
-- [ ] Data safety rempli · Content rating rempli · Public 18+
-- [ ] Test interne OK → Production → Envoyé pour examen
+
+**Déjà fait et vérifié dans ce dépôt** (rien à faire)
+- [x] Politique de confidentialité **en ligne** et répondant 200 :
+      <https://morpheus45.github.io/GSYSTEM-EPS/privacy-policy.html>
+- [x] Icône 512×512 PNG + feature graphic 1024×500 PNG — dimensions et formats contrôlés
+- [x] Textes de fiche FR — longueurs contrôlées (nom 9/30, courte 79/80, complète 1165/4000)
+- [x] Réponses « Sécurité des données » et « Classification du contenu » rédigées
+- [x] Page d'accueil du site sans lien mort
+
+**À faire par toi** (tes identifiants Google sont indispensables)
+- [ ] Compte Play créé (25 $) + identité vérifiée
+- [ ] `targetSdk` + `compileSdk` passés à **36** dans `morpheus45/gsystem` ⚠️ bloquant
+- [ ] AAB signé généré (`app-release.aab`) avec la clé d'upload conservée en sûr
+- [ ] 2 captures d'écran minimum prises sur le téléphone, puis ajoutées
+- [ ] Textes de fiche recopiés + URL de confidentialité renseignée dans la console
+- [ ] Data safety + Content rating recopiés · Public 18+
+- [ ] Test fermé 12 testeurs / 14 jours (si compte particulier post-13/11/2023)
+- [ ] Production → Envoyé pour examen
+- [ ] Après validation : lien Play collé dans `index.html` (§6)
